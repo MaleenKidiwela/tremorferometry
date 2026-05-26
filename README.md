@@ -45,10 +45,34 @@ figures/        # output plots
 
 ## Install
 
+A dedicated conda env at `/home/jovyan/envs/tremorferometry` already has the
+full stack installed (obspy, eqcorrscan, fast-matched-filter built against
+CUDA 12.4, plus this package in editable mode). Activate with
+
 ```bash
-pip install -e .[dev]
-# Optional GPU template matching (requires CUDA toolchain):
-pip install -e .[gpu]
+mamba activate /home/jovyan/envs/tremorferometry
+```
+
+To recreate from scratch on another host:
+
+```bash
+mamba create -p /path/to/env -c conda-forge python=3.11 \
+  numpy scipy pandas matplotlib h5py pyarrow pyyaml \
+  obspy eqcorrscan joblib tqdm pytest
+mamba activate /path/to/env
+
+# fast-matched-filter (GPU template matching, needs nvcc on PATH)
+pip install --no-build-isolation \
+  "git+https://github.com/beridel/fast_matched_filter.git"
+# FMF ships sources only; build the CPU + GPU .so files:
+FMF=$(python -c "import fast_matched_filter, os; print(os.path.dirname(fast_matched_filter.__file__))")
+mkdir -p $FMF/lib && cd $FMF/src
+gcc -O3 -fopenmp -fPIC -march=native -shared matched_filter.c \
+    -o $FMF/lib/matched_filter_CPU.so
+nvcc -O3 -Xcompiler "-fPIC -fopenmp" -shared matched_filter.cu \
+     -o $FMF/lib/matched_filter_GPU.so
+
+pip install --no-deps --no-build-isolation -e .
 ```
 
 ## v1 target
