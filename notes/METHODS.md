@@ -827,6 +827,63 @@ Figure: `figures/smoke_per_path_dvv_clean.png` shows the 10 trustworthy
 paths' dv/v values across 2010–2013. The line for fam2-PGC is the clearest
 example of a path-specific consistent offset.
 
+### E.7i Single-station matched-filter on continuous data — proper time series
+
+The previous Phase E.7g/h sections only fetched peak-day ± 1 day data for
+2011-2013, which collapsed each non-2010 year into a single dv/v measurement.
+That was an observational limitation, not a physical one: LFE patches fire
+many times per year, not just on the peak ETS day.
+
+Fixed by fetching full ETS-span continuous data (≥30 days/year for 2011-13)
+from IRIS, then running **sliding-window matched filter** on PGC continuous
+data with each family template (`src/tremorferometry/matched_filter.py`).
+This finds every time a template matches anywhere in continuous data, not
+just at Lin's pre-detected events. Single station, single template, every
+sample — the literal "same signal at same station over time" test.
+
+**Validation:** stacking 500 random matched-filter detections (CC ≥ 0.7) for
+family 0 in 2010 gives a stack that matches the original template at
+CC = 0.966. The matches are real LFE family members, not noise coincidences.
+
+**Catalog growth:**
+
+| Family | Detections at CC ≥ 0.7 (PGC, 2005-2013) |
+|---|---|
+| 0  | 129,260 |
+| 2  | 228,526 |
+| 4  | 25,509 |
+| 9  | 28,595 |
+| 10 | 160,777 |
+| 14 | 87,097 |
+| 18 | 41,080 |
+| **Total** | **700,844** |
+
+These come from continuous data scanning, **not** from pre-existing detection
+lists. They include detections during ETS bursts and lower-rate firings
+between ETS cycles.
+
+**Daily-resolution dv/v across multiple ETS cycles** (figure
+`figures/smoke_daily_dvv_pgc.png`):
+
+- 1,897 (family, day) dv/v measurements with ≥20 detections per day
+- Reference: pre-Aug 2010 stack at each family
+- All paths stay within ±0.3 % across 2010-2013
+- Per-family persistent offsets exist (fam 2 ~ −0.2 %) but are tiny vs the
+  ~1 % offset we incorrectly inferred earlier from peak-day-only data
+- The ETS windows (shaded) show **no clear bulk dv/v excursion** at
+  daily resolution
+
+**Conclusion (refined):** with the proper observational density (matched
+filter on continuous data → hundreds of LFE detections per day per family),
+the dv/v along the southern V.I. plate-interface-to-PGC source-receiver
+paths is **stable to ~±0.3 % across the 2010-2013 ETS cycles**. The earlier
+"−1 %" finding for fam2-PGC was inflated by using small-N per-year stacks
+from peak-day-only data; with daily stacks of hundreds of detections, the
+true per-path inter-ETS variability is much smaller.
+
+This is the cleanest LFE-CWI measurement we have. ETS does not produce a
+detectable bulk dv/v signal along these paths at our resolution.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
