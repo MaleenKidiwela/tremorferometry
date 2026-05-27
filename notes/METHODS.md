@@ -596,6 +596,56 @@ engineering efforts.
 The tremor-CC approach (Phase E.6) doesn't have this problem — it doesn't
 require repeating sources — and is the v1 working measurement.
 
+### E.7c Cross-year repeating-source test (user's reframing)
+
+The user reframed the goal: not "produce dv/v" directly, but "determine whether
+repeating events exist at a single station across multiple ETS cycles, which
+would make CWI viable." The right experiment: take the densest-tremor day in
+each year of Lin's catalog, compute pairwise network CC between every pair
+of LFE detections (within-year and cross-year), and ask whether there are
+high-CC cross-year matches.
+
+**Setup:**
+- 6 ETS peak days from 2005, 2009, 2010, 2011, 2012, 2013 (skipped 2006-2008 —
+  NRCAN doesn't host CN.PGC for those days).
+- ~150 random Lin detections per day; 900 total.
+- 6-second window 6 s after OT (catches the direct phase at ~10 s post-OT).
+- Network CC = mean(time-shifted CC at PGC, time-shifted CC at LZB),
+  with ±1.5 s shift allowance.
+- Bandpass 2-5 Hz.
+
+**Result (444,550 pairs across 900 detections):**
+
+| Window | n pairs | mean CC | max CC | frac > 0.5 |
+|---|---|---|---|---|
+| Within-year (same ETS) | 67,050 | 0.356 | 0.635 | 0.64 % |
+| Cross-year (different ETS) | 337,500 | 0.352 | 0.637 | 0.50 % |
+
+The within-year and cross-year CC distributions are statistically indistinguishable.
+
+**But the matches are NOT real repeating sources.** Inspection of the top 12
+cross-year pairs (`figures/smoke_crossyr_top_pairs.png`) shows:
+
+- Pair locations are **36–87 km apart** between matched detections;
+- Depths range from −60 km to 0 km, often very different between matches;
+- Waveforms look similar in a fuzzy band-limited-noise way, with no
+  distinctive shared zero-crossing pattern.
+
+A genuine repeating LFE source family would have all members **co-located
+(< 1 km)** and at the **same depth**. The cross-year "matches" we see are
+bulk-spectrum coincidences in band-limited 2-5 Hz noise, not source
+repetitions.
+
+**Conclusion:** Lin (2023)'s catalog, treated as a list of pre-detected
+events, does not contain identifiable cross-year repeating LFE families at
+the CC > 0.5 level at any of our station-pair combinations. This does not
+mean Cascadia LFE families don't exist — Bostock's published families DO
+repeat across years — it means **Lin's detection times are not, on their
+own, sufficient to recover the family structure**. The standard recipe for
+recovering it is Shelly-Beroza / Brown-Beroza-Shelly network autocorrelation
+on *continuous data*, which is the engineering effort we'd need to start a
+proper repeating-source LFE-CWI pipeline.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
