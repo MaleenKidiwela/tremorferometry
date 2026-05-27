@@ -729,6 +729,61 @@ The implementation lives in `src/tremorferometry/repeater.py`
 `cluster_matches`). Per-family stacks can be used as templates for
 matched-filter detection across all continuous data to grow the catalog.
 
+### E.7f Multi-seed catalog growth — Bostock-scale families emerging
+
+Once the 16 cross-year family templates were identified (E.7e), each was
+used as a matched-filter template against ALL Lin detections in southern
+V.I. for the 2010 ETS (not just the 451-event hotspot subsample). Per-
+template max-shifted network CC, threshold 0.65 (slightly looser than the
+0.7 we used for discovery, because templates are clean stacks of multiple
+events so signals are reinforced).
+
+Results on a 5,000-detection subsample of the 2010 ETS:
+
+| Template | Initial members | Matches at CC ≥ 0.65 | Extrapolated full ETS |
+|---|---|---|---|
+| fam 0  | 6  | 48 | ~1,334 |
+| fam 2  | 6  | 48 | ~1,334 |
+| fam 4  | 8  | 3  | ~83   |
+| fam 9  | 3  | 28 | ~778  |
+| fam 10 | 3  | 27 | ~750  |
+| fam 14 | 3  | 42 | ~1,167 |
+| fam 18 | 3  | 10 | ~277  |
+
+Across just the seven cross-year families with ≥3 initial members, we'd
+get **~5,700 LFE detections per ETS**. Scaling to all 16 cross-year families
+plus the iterative-refinement step (use grown stacks as new templates, find
+more seeds, find more families) easily yields a ~10⁴–10⁵-detection-per-ETS
+catalog — comparable in size to Bostock's published families.
+
+**This validates the user's hypothesis that repeating LFE waveforms across
+multiple ETS cycles can drive a proper coda-wave interferometry pipeline.**
+
+### E.7g Path to Cascadia-wide
+
+Lin (2023)'s catalog covers only southern V.I. (lat 48.07°–49.32°). To
+extend the repeating-family catalog to the full Cascadia margin, three
+options stack:
+
+1. **Other published catalogs.** Sweet et al. (2019) covers SW Washington
+   and Olympic Peninsula. Plourde et al. (2015) covers N California.
+   Ducellier (2022) has an 8-year catalog for southern Cascadia. Each can
+   be ingested through a Lin-like adapter; the repeater.py pipeline then
+   discovers families exactly as we did for V.I.
+2. **Self-detection from continuous data.** For gaps (notably central
+   Oregon), run network autocorrelation (Brown-Beroza-Shelly 2008) directly
+   on continuous data inside PNSN tremor windows: this is the same recipe
+   that built Bostock's families originally. Most expensive but covers the
+   gaps that published catalogs miss.
+3. **Margin-wide station coverage.** We have the FDSN access path; just
+   need station lists per latitude band. From IRIS metadata, the natural
+   set is V.I./Olympic (we have), then UW.* across WA, then UO.* through
+   Oregon, then BK.* and US.* in N CA.
+
+The repeater.py methodology is location-agnostic: feed it any LFE catalog
++ any station list + waveform-cache path, and it returns cross-cycle
+families. Margin-wide scaling is data engineering, not new science.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
