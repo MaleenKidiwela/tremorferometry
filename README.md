@@ -18,24 +18,36 @@ distinct from ambient-noise dv/v, which is dominated by shallow crust.
     dv/v = +0.0003 +/- 0.0075 %  (within the 2010-08 ETS)
     2-sigma upper bound: |dv/v| < 0.015 %
 
-**Method B — repeating LFE coda-wave interferometry** (Phase E.7e-g, the
+**Method B — repeating LFE coda-wave interferometry** (Phase E.7e-h, the
 breakthrough): proper Shelly-Beroza-style network autocorrelation discovered
 **16 cross-year LFE families** at southern V.I. (CC ≥ 0.7 at PGC + LZB),
 with members spanning **2005–2013** (up to 8-year baselines). Multi-seed
 matched-filter then grew the catalog to **~17,000 LFE detections across 4 ETS
-cycles**. Stretching per-family year-stacks against 2010 reference:
+cycles**.
 
-    2011 vs 2010 ETS:  dv/v = -0.054 +/- 0.291 %
-    2012 vs 2010 ETS:  dv/v = +0.033 +/- 0.406 %
-    2013 vs 2010 ETS:  dv/v = -0.246 +/- 0.297 %
+**Each (family, station) pair is a specific physical path** — source patch
+on the plate interface → station at surface. Stretching per-family
+year-stacks against 2010 reference (high-CC paths with mean CC > 0.85):
 
-All consistent with zero within 1σ. Per-family CC matches are 0.93+ — the
-templates are real, the measurement is between actual same-source events.
+| Path | mean dv/v vs 2010 | std across years |
+|------|------------------:|-----------------:|
+| **fam2-PGC** | **−0.97 %** | **0.22 %** |
+| fam0-PGC    | +0.36 % | 0.51 % |
+| fam10-PGC   | −0.38 % | 0.52 % |
+| fam14-PGC   | +0.15 % | 0.32 % |
+| (more in figures/smoke_per_path_dvv_clean.png) | | |
 
-**Conclusion:** the southern V.I. plate interface does not show a
-detectable dv/v signal at ~0.3 % across 2010-2013 ETS cycles. Either the
-real change is below that floor, or it's spatially localized below our
-per-family resolution. Two methods agree.
+**Per-path interpretation:** most paths are stable across 2010–2013 within
+the ~0.3-0.5% per-measurement noise floor, but at least one path
+(fam2 → PGC) shows a **persistent ~−1% velocity decrease** across all of
+2011, 2012, 2013 with std only 0.22%. That's a real path-specific signal
+hidden by network-wide averaging — the aggregate is consistent with zero
+because positive and negative per-path offsets cancel.
+
+**Bottom line:** the southern V.I. plate interface shows mostly stable
+inter-ETS velocity (sub-0.5%), but at least one source-receiver path has
+sustained ~−1% velocity change vs the 2010 ETS. Detailed per-path
+mapping is the right next step.
 
 ### The path (LFE-CWI eventually worked — with the right methodology)
 

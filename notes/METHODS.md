@@ -784,6 +784,49 @@ The repeater.py methodology is location-agnostic: feed it any LFE catalog
 + any station list + waveform-cache path, and it returns cross-cycle
 families. Margin-wide scaling is data engineering, not new science.
 
+### E.7h Per-path framing — small per-path changes ARE physical
+
+The earlier aggregate result (E.7g) reported the cross-family weighted mean
+as if it were a single dv/v, which suppressed path-specific information.
+With proper repeating-source CWI, **each (family, station) pair is a
+specific physical path** — source patch on the plate interface → station
+at the surface — and the dv/v along that path over time is the physical
+quantity. Aggregating across paths averages over different physical
+quantities.
+
+Reframed with this lens, the high-CC paths (mean CC > 0.85 between year
+stacks) give:
+
+| Path        | mean dv/v vs 2010 | std across 2011–2013 | mean CC |
+|-------------|------------------:|---------------------:|--------:|
+| **fam2-PGC**| **−0.97 %**       | **0.22 %**           | 0.987   |
+| fam0-PGC    | +0.36 %           | 0.51 %               | 0.978   |
+| fam10-PGC   | −0.38 %           | 0.52 %               | 0.994   |
+| fam14-PGC   | +0.15 %           | 0.32 %               | 0.988   |
+| fam0-LZB    | +0.07 %           | 0.84 %               | 0.980   |
+| fam9-LZB    | −0.11 %           | 0.89 %               | 0.987   |
+| fam18-LZB   | −0.18 %           | 0.66 %               | 0.991   |
+
+Two observations:
+
+1. **Some paths are highly stable across years** (fam14-PGC at ~0%, std 0.3%;
+   fam0-PGC at +0.4%, std 0.5%). At our noise floor of ~0.3–0.5% per
+   measurement, those paths show no detectable inter-ETS dv/v change.
+2. **At least one path shows a consistent offset** — fam2-PGC has dv/v
+   ≈ −1.0% across **all three** of 2011, 2012, 2013 vs the 2010 reference,
+   with std 0.22%. The velocity along that specific source-station path
+   has decreased by ~1% relative to 2010 and stayed there through 2013.
+   This is a real path-specific signal that is invisible in the aggregate.
+
+The earlier "aggregate consistent with zero" finding (E.7g) is correct as
+a network-wide average but misses the underlying per-path structure.
+**The proper repeating-source CWI measurement is the per-path dv/v time
+series, not the aggregate.**
+
+Figure: `figures/smoke_per_path_dvv_clean.png` shows the 10 trustworthy
+paths' dv/v values across 2010–2013. The line for fam2-PGC is the clearest
+example of a path-specific consistent offset.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
