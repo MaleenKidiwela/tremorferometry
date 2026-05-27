@@ -62,6 +62,10 @@ def fetch_events(
         params = {"starttime": c0.date().isoformat(), "endtime": c1.date().isoformat()}
         log.info("PNSN tremor fetch %s..%s", params["starttime"], params["endtime"])
         r = sess.get(API_URL, params=params, timeout=timeout)
+        if r.status_code == 404:
+            # API returns 404 for date ranges with no events; treat as empty.
+            log.info("  no events in this chunk (404)")
+            continue
         r.raise_for_status()
         payload = r.json()
         for feat in payload.get("features", []):
