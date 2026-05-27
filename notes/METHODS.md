@@ -1079,6 +1079,76 @@ than the short 2-s daily-stack npz.
 Figure `figures/smoke_dvv_PGC_79_window_compare.png`: side-by-side
 1–3 s vs 0–2 s scatter for PGC_79 makes the contamination obvious.
 
+### E.7o Full 51-patch coda-window redo
+
+Following E.7n at PGC_79, redid the full 51-family dv/v product on the
+1–3 s coda window for every patch:
+
+1. The 16 STRICT_* templates didn't have a saved MF detection CSV
+   (their raw detection times had only existed in memory during the
+   original 0–2 s product build), so reran the matched filter for them
+   against all 2005-2026 PGC days
+   (`scripts/scan_strict_templates.py` → `data/mf_pgc_strict.csv`,
+   32.8 M detections at CC≥0.7).
+2. Filtered STRICT detections to CC ∈ [0.8, 1.1] (upper bound rejects
+   rare numerical artifacts with vanishing window-std) and concatenated
+   with `mf_pgc_2005-2026_cc08.csv` → `data/mf_pgc_all51_cc08.csv`
+   (12.1 M detections across 51 templates).
+3. Rebuilt long-window daily stacks for all 51 with
+   `scripts/build_long_window_daily_all51.py` (loads each PGC day once
+   and processes all 51 templates against it; output:
+   `data/long_window_daily_all51.npz`, 125 066 (template, day) rows).
+4. Stretched every day-stack against its family's all-time-mean LFE
+   reference on the 1–3 s coda window via `scripts/dvv_coda_51.py`.
+
+Bug-fix note: the very first build collapsed every detection time to
+~1970 because `pd.to_datetime(..., format='mixed')` returned
+`datetime64[us]` on this pandas version, and the subsequent
+`astype('int64') // 1000` therefore turned out to be a milliseconds-not-microseconds
+conversion. Fixed by an explicit cast to `datetime64[ns]` before
+integer roundtripping.
+
+Result (`data/daily_dvv_51_coda_1to3.csv`):
+
+| field | value |
+|-------|-------|
+| measurements | 123 644 daily dv/v values |
+| patches | 49 (51 attempted; 2 dropped for sparse data after CC≥0.8 filter) |
+| mean stretching CC | 0.977 |
+| per-day dv/v median | -0.002% |
+| per-day dv/v 5–95%ile | -0.088% / +0.078% (**symmetric** around 0) |
+| cross-patch 60-d median range | within ±0.04% across 21 years |
+
+Visible mild ETS-time dips of ~0.02–0.04% in the cross-patch median
+around 2017, 2022, 2024 — present in both the Original-35 panel and the
+New-Strict-16 panel, suggesting the dips are not template-set artifacts.
+But the amplitude is right at the level of normal cross-patch median
+fluctuation, so I would not over-interpret them yet.
+
+Compared side-by-side with the previous 0–2 s product
+(`figures/smoke_dvv_direct_orig35.png`):
+
+- **Direct 0–2 s**: per-patch tracks routinely reach ±0.1%, cross-patch
+  median dips to -0.05% during ETS clusters; 5–95% asymmetric at
+  -0.19 / +0.14%.
+- **Coda 1–3 s**: per-patch tracks within ±0.05%, cross-patch median
+  inside ±0.04%; 5–95% symmetric at -0.09 / +0.08%.
+
+The coda is ~2× tighter and unbiased — consistent with classical CWI:
+the medium probe lives in the coda, not the direct phase. The
+**canonical PGC-only dv/v product for this project is now
+`data/daily_dvv_51_coda_1to3.csv`**; the 0–2 s version is retained
+solely for the methodology comparison and should not be cited as a
+medium measurement.
+
+Figures:
+- `figures/smoke_dvv_51_coda_1to3.png`: the canonical 51-patch coda
+  product (two panels: Lin-seeded 35, PNSN-discovered strict 16).
+- `figures/smoke_dvv_coda_vs_direct_orig35.png`: coda-only single-panel
+  on the 29 Original-35 patches with sufficient data.
+- `figures/smoke_dvv_direct_orig35.png`: same single-panel layout but
+  on the 0–2 s direct-S product, for the side-by-side comparison.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
