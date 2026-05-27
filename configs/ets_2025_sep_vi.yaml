@@ -9,8 +9,12 @@ episode:
   bbox:    [47.30, 49.70, -126.20, -122.20]
 
 stations:
-  network: CN,UW
-  list:    [SNB, PGC, LZB, TWKB, TWBB]
+  # V.I.: PGC (Pat Bay), NLLB (Nanoose Bay), PABB (Port Alberni), OZB (Tofino),
+  # PTRF (Port Renfrew). Olympic Peninsula: SQM (Sequim), NLWA (Forks).
+  # All confirmed via IRIS/EarthScope FDSN, channels HH? at 100 Hz, no gaps in
+  # spot-checked Oct 2025 windows.
+  network: CN,UW,US
+  list:    [PGC, NLLB, PABB, OZB, PTRF, SQM, NLWA]
 
 match:
   cc_threshold: 0.4

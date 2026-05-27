@@ -46,9 +46,15 @@ def stack_family_station(
     """Return {bin_index: stacked waveform} for one (family, station) pair."""
     from obspy import read
 
-    fam_det = detections[
-        (detections["family_id"] == family_id) & (detections["station"] == station)
-    ]
+    if "station" in detections.columns:
+        fam_det = detections[
+            (detections["family_id"] == family_id) & (detections["station"] == station)
+        ]
+    else:
+        # Catalog-direct mode: detection times apply to every station, no per-
+        # station filter. Used when stacking from Lin (2023) or any other LFE
+        # catalog where origin times are the detection record.
+        fam_det = detections[detections["family_id"] == family_id]
     if fam_det.empty:
         return {}
 

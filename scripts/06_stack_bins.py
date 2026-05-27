@@ -37,14 +37,24 @@ def main() -> None:
     cfg = load_config(args.config)
     selected = pd.read_csv(args.selected)
 
-    all_det = []
-    for fid in selected["family_id"].astype(str):
-        p = args.detections / f"{fid}.parquet"
-        if p.exists():
-            all_det.append(pd.read_parquet(p))
-    if not all_det:
-        raise SystemExit("no detection parquets found")
-    detections = pd.concat(all_det, ignore_index=True)
+    if args.detections.is_dir():
+        # Template-matching layout: one parquet per family
+        all_det = []
+        for fid in selected["family_id"].astype(str):
+            p = args.detections / f"{fid}.parquet"
+            if p.exists():
+                all_det.append(pd.read_parquet(p))
+        if not all_det:
+            raise SystemExit(f"no detection parquets under {args.detections}")
+        detections = pd.concat(all_det, ignore_index=True)
+    else:
+        # Catalog-direct layout: one parquet with all families
+        if not args.detections.exists():
+            raise SystemExit(f"detections file not found: {args.detections}")
+        detections = pd.read_parquet(args.detections)
+        # restrict to selected families
+        keep = set(selected["family_id"].astype(str))
+        detections = detections[detections["family_id"].astype(str).isin(keep)].copy()
     detections["time"] = pd.to_datetime(detections["time"])
 
     ref_pre, _ = cfg.dvv.reference_window

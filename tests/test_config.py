@@ -15,10 +15,10 @@ def test_loads_example_config() -> None:
     cfg = load_config(EXAMPLE)
     assert isinstance(cfg, Config)
     assert cfg.event_id == "ets_2010_vi"
-    assert cfg.episode.t_start == datetime(2010, 8, 1)
-    assert cfg.episode.t_end == datetime(2010, 9, 1)
-    assert cfg.episode.bbox == (48.0, 49.5, -124.5, -122.5)
-    assert "SNB" in cfg.stations.list
+    assert cfg.episode.t_start == datetime(2010, 8, 15)
+    assert cfg.episode.t_end == datetime(2010, 9, 15)
+    assert cfg.episode.bbox == (48.0, 49.4, -124.6, -123.0)
+    assert "PGC" in cfg.stations.list
     assert cfg.dvv.coda_window == (5.0, 25.0)
     assert cfg.dvv.freq_band == (2.0, 8.0)
     assert cfg.dvv.stretch_steps == 201
