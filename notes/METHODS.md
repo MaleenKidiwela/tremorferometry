@@ -646,6 +646,36 @@ recovering it is Shelly-Beroza / Brown-Beroza-Shelly network autocorrelation
 on *continuous data*, which is the engineering effort we'd need to start a
 proper repeating-source LFE-CWI pipeline.
 
+### E.7d Hotspot persistence: locations DO repeat, waveforms don't (cleanly)
+
+Although individual detection waveforms didn't cross-correlate well across
+years (E.7c), the **spatial pattern of LFE activity is highly persistent**.
+Comparing the top-50 (0.05°) detection-density cells in each year against
+2010's:
+
+    2005 vs 2010: 27/50 cells in common (54 %)
+    2008 vs 2010: 29/50 cells in common (58 %)
+    2012 vs 2010: 36/50 cells in common (72 %)
+    2013 vs 2010: 37/50 cells in common (74 %)
+
+The central V.I. hotspot at ~(48.8°N, −124°E) is unmistakably the same
+across every ETS cycle 2005-2013 (`figures/smoke_crossyr_hotspot_persistence.png`).
+
+This is the standard Bostock LFE zone, and it confirms that **the physical
+premise of repeating-source CWI is valid for Cascadia**: the same patches
+of the plate interface fire ETS after ETS. What our test E.7c shows is
+that **individual detection waveforms vary even within a stable hotspot** —
+each hotspot contains many sub-patch sources that fire variably.
+
+So:
+  - To do repeating-source CWI, you need to recover sub-patch families
+    inside each hotspot (Bostock's recipe: waveform-similarity clustering).
+  - Lin's catalog gives you detection times across the whole hotspot but
+    not the sub-family structure within it.
+  - Tremor-CC (Phase E.6) bypasses this entirely by treating the entire
+    hotspot as a distributed source field, which is why it gives a clean
+    measurement at the cost of losing per-patch spatial resolution.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
