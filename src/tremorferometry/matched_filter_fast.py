@@ -121,6 +121,15 @@ def scan_day_multi(
     return out
 
 
+def _worker_task(args):
+    """Module-level worker for ProcessPoolExecutor (must be pickleable)."""
+    (waveform_root, station, day, templates, fs, bandpass, threshold, min_gap_s) = args
+    return day, scan_day_multi(
+        waveform_root, station, day, templates,
+        fs=fs, bandpass=bandpass, threshold=threshold, min_gap_s=min_gap_s,
+    )
+
+
 def scan_many_days_multi(
     waveform_root: Path,
     station: str,
@@ -136,17 +145,15 @@ def scan_many_days_multi(
     """Parallel: load each day once, run all templates."""
     from concurrent.futures import ProcessPoolExecutor, as_completed
 
-    def task(day):
-        return day, scan_day_multi(
-            waveform_root, station, day, templates,
-            fs=fs, bandpass=bandpass, threshold=threshold, min_gap_s=min_gap_s,
-        )
-
     rows = []
     done = 0
     total = len(days)
+    args_list = [
+        (waveform_root, station, d, templates, fs, bandpass, threshold, min_gap_s)
+        for d in days
+    ]
     with ProcessPoolExecutor(max_workers=n_workers) as ex:
-        futs = {ex.submit(task, d): d for d in days}
+        futs = {ex.submit(_worker_task, a): a[2] for a in args_list}
         for f in as_completed(futs):
             day, res = f.result()
             if res is not None:
@@ -155,6 +162,5 @@ def scan_many_days_multi(
                         rows.append({"template": tkey, "time": t, "cc": cc, "station": station})
             done += 1
             if done % progress_every == 0:
-                import time
                 print(f"[{station}] day {done}/{total}: cumulative {len(rows)} detections", flush=True)
     return pd.DataFrame(rows)
