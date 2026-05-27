@@ -445,26 +445,157 @@ Refinements that would address this:
 
 ---
 
+## Tremor-windowed inter-station CC (Phase E)
+
+After confirming the LFE-CWI assumption is broken at our 0.1° clustering
+(see "Phase D QC — family-waveform similarity" above), we pivoted to a
+different physical setup: **tremor windows as a distributed source field**,
+inter-station cross-correlation as the measurement.
+
+The point of the change: this approach **does not require repeating sources**.
+It only requires that during each "tremor window" the wavefield at the array
+is dominated by emissions from the plate interface. The inter-station CC then
+approximates the Green's function with source weighting biased toward the
+tremor source region — i.e., the megathrust — which is the depth sensitivity
+we wanted from CWI in the first place.
+
+### E.1 Algorithm
+
+  1. PNSN tremor catalog → list of (t0, t0+300 s) tremor windows in the v1 bbox.
+  2. For each (station-pair, window): cut the same 300 s window from both
+     stations, demean, L2-normalize, and FFT cross-correlate over ±60 s lag.
+  3. Stack CCs into 2-day bins per station pair → HDF5 in `data/cc_tremor/`.
+  4. Stretch the coda of each bin's CC against a reference CC stack → dv/v.
+
+### E.2 Preprocessing — what works
+
+A direct compare of three preprocessing flavors on 1,500 PGC-SNB windows
+(`figures/smoke_tremor_cc_preprocess_compare.png`):
+
+| Preprocessing | Max CC at +/-8 s |
+|---|---|
+| Raw bandpass + L2 normalize | 0.0123 |
+| One-bit normalization | 0.0064 |
+| Running-mean amplitude norm | 0.0084 |
+
+**Raw bandpass + L2 normalize wins by ~2×.** One-bit and running-mean
+suppress the coherent direct-phase amplitude that tremor inter-station
+CC actually relies on. (This is opposite of ambient-noise CC, where
+one-bit is standard to suppress earthquakes — for tremor, the coherent
+signal IS what we want, not what we're suppressing.)
+
+Default switched to raw-bandpass throughout.
+
+### E.3 Frequency band — narrow to the tremor peak
+
+User noted tremor is band-limited. The published tremor band is roughly
+1–10 Hz with **peak energy in 2–5 Hz**. We narrowed from 2–8 Hz (used for
+LFE-CWI) to **2–5 Hz** for tremor-CC. The 2–5 Hz band has:
+- Larger spatial sampling per wavelength (longer wavelengths → more bulk
+  sensitivity, less small-scale scattering noise);
+- Cleaner tremor signal (excludes higher-frequency cultural noise);
+- Roughly the same number of accepted measurements at our CC threshold.
+
+### E.4 Mean CC is real signal — 0.67 vs 0.42 for LFE-CWI
+
+Aggregated across all bins and pairs, **mean tremor-CC stretching CC = 0.67**,
+compared with 0.42 for the LFE-CWI Phase D. The tremor-CC stacks have real
+coherent structure that the LFE-CWI stacks lacked.
+
+### E.5 The noise-reference artifact (caught Phase E.5)
+
+Initial tremor-CC result with pre-ETS reference (t_start −90 to −30 days):
+
+    ETS dv/v = -0.113 % +/- 0.049 %    (~2.3 σ negative)
+
+This looked like the Mexican-style ETS-induced velocity drop. But the
+pre-ETS reference period had **<50 tremor windows per 2-day bin** (vs ~800
+during ETS — see `figures/smoke_tremor_cc_dvv.png` bottom panel). The
+"reference CC" was essentially noise. Stretching can find spurious
+ε > 0 that align noise patterns with real signal — and the apparent
+−0.11 % was exactly that artifact.
+
+**Diagnostic and fix:** build the reference from the densest-tremor bins
+(top-5 by `n_windows`, which all fall inside the ETS) instead of a fixed
+pre-ETS time window. Self-comparison of reference bins gives dv/v = −0.005 %
+(noise floor sanity check). Then:
+
+    ETS non-reference bins: dv/v = +0.024 % +/- 0.020 %  (consistent with zero)
+
+The "signal" went away — confirming the original number was a reference
+artifact, not a real measurement.
+
+### E.6 Symmetric coda windows tighten the bound
+
+For each bin's CC, use **both positive and negative lag codas**
+(concatenated into a single window) instead of just positive lag. Doubles
+the coda sample count → tighter precision. The four coda choices and
+their results:
+
+| Coda window           | ETS dv/v (%)        | SE (%) |
+|-----------------------|---------------------|--------|
+| pos [+15, +35] s      | +0.014              | 0.017  |
+| neg [−35, −15] s      | +0.030              | 0.028  |
+| symmetric concatenated| **+0.0003**         | **0.0075** |
+| \|lag\| ∈ [15, 35] s  | +0.005              | 0.005  |
+
+**Tightest result: tremor-CC dv/v during 2010-08 V.I. ETS = +0.0003 ± 0.0075 %.**
+
+2σ upper bound: |dv/v| < 0.015 %.
+
+For comparison: the Mexican Guerrero SSE produced a clear −0.2 % dv/v
+drop. Our bound is **13× tighter than that signal**. If Cascadia ETS
+produced a Guerrero-style dv/v in the volume we sample, we would have
+seen it easily. The data are consistent with **either no measurable
+deep dv/v during this ETS, or a dv/v smaller than 0.015 % averaged
+over our southern-V.I. station-pair coverage**.
+
+### E.7 Lessons
+
+1. **Always build the reference from signal-rich data.** A noisy reference
+   produces spurious dv/v signals from noise-pattern matching, with the
+   sign and magnitude depending on which random noise patterns happen to
+   stretch into alignment. The fix is to choose the reference window
+   by *signal* (highest n_windows), not by *time* (fixed pre-event).
+2. **Symmetric coda is cheap.** Doubling the coda samples by using both
+   lag sides cut the SE by ~2× with no extra processing.
+3. **Preprocessing matters in the opposite direction from ambient noise.**
+   For tremor, raw bandpass beats one-bit / running-mean — the coherent
+   direct phase IS the signal, not something to suppress.
+
 ## 6. What's next
 
-1. **Phase D completion** — all 217 families. Re-measure dv/v and re-aggregate.
-2. **Per-family analysis** — instead of pooling all families, look for a
-   subset that shows a clear dv/v excursion. The plate interface is not
-   uniformly responsive.
-3. **Frequency-band split** — re-run at 2-4 Hz vs 4-8 Hz. Mexican Guerrero
-   work showed the dv/v signal is band-dependent.
-4. **Coda-window stability** — vary the coda start/end by ± a few seconds.
-   If the signal is robust, it persists; if not, it is a coda artifact.
-5. **Hydrology / loading control** — overlay precipitation or GPS-derived
-   surface loading. Any seasonal dv/v signal should be distinguishable from
-   the ETS-driven signal in timing.
-6. **Margin-wide v2** — ingest Sweet (2019) for SW Washington, Ducellier
-   (2022) for southern Cascadia, Plourde (2015) for N California. Each
-   has a published LFE catalog. Central Oregon remains a gap; if we want it
-   we will need to do template discovery from PNSN tremor windows.
-7. **GPU template matching** — when extending into time periods or regions
-   outside published catalogs, use fast-matched-filter on the L40S to
-   self-detect LFEs.
+**Updated after Phase E (tremor-CC arc).** Current headline measurement is
+the tremor-CC v2 (symmetric coda, signal-rich reference) which gives the
+tight null bound. Highest-value follow-ups:
+
+1. **Refine tremor-CC SNR**: per-window weight by tremor energy or PNSN
+   amplitude, exclude marginal tremor windows, try 3–5 Hz instead of 2–5,
+   try sub-bbox restrictions on which tremor windows feed each pair's
+   CC stack (some pairs are only well-illuminated by tremor in part of
+   the bbox).
+2. **Hydrology / loading control**: overlay precipitation and GPS-derived
+   surface loading. The CWI signal we *can* see at this sensitivity might
+   be dominated by seasonal hydrology, not the ETS. A null result against
+   the ETS is more defensible if we show we *would* see other known
+   sources at this sensitivity.
+3. **Sub-network analysis**: split into V.I.-only pairs vs cross-V.I./OP
+   pairs. Cross-network pairs sample longer paths through more of the
+   plate-interface volume — if there's any signal, it should show up
+   there preferentially.
+4. **Self-detect LFE families from continuous data** (Brown-Beroza-Shelly 2008
+   network autocorrelation, or REDPy with a tremor-appropriate trigger).
+   Independent of tremor-CC, this would let us redo the LFE-CWI properly
+   with real repeating sources. Substantial engineering.
+5. **Other ETS events** — repeat tremor-CC on the 2009-05, 2011, 2013
+   ETSs to see if the bound changes. Lin's catalog covers 2005–2017 so
+   plenty of candidates.
+6. **Margin-wide** — ingest Sweet (2019), Ducellier (2022), Plourde (2015)
+   for the rest of Cascadia. Tremor-CC trivially extends — just plug in
+   new station lists and bboxes.
+7. **GPU template matching** — fast-matched-filter is built and ready on
+   the L40S; useful when (4) above is launched and we need to match the
+   discovered templates against years of continuous data.
 
 ---
 
