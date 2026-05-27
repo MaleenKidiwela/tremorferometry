@@ -200,7 +200,7 @@ def main():
         f"({df['time'].min().date()} – {df['time'].max().date()}), "
         f"bandpass {args.fmin}-{args.fmax} Hz, cc>={args.cc_min}"
     )
-    ax0.set_xticklabels([])
+    plt.setp(ax0.get_xticklabels(), visible=False)
 
     ax1 = fig.add_subplot(gs[1], sharex=ax0)
     # convert dates to ordinal floats for imshow extents
