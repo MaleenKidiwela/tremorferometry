@@ -928,6 +928,66 @@ true per-path inter-ETS variability is much smaller.
 This is the cleanest LFE-CWI measurement we have. ETS does not produce a
 detectable bulk dv/v signal along these paths at our resolution.
 
+### E.7j Wider patch survey — 35 cross-year repeating patches across S. V.I.
+
+User flagged that the original 7 cross-year families all clustered in a
+single ~5 km region near (48.85, −123.85). That was an artifact of seeding
+discovery from one hotspot. Lin's catalog covers a much wider area with
+many distinct hotspots.
+
+Re-ran the discovery with a 6000-detection sample across **all** Lin hotspot
+cells in the 6 peak days (2005, 2009, 2010, 2011, 2012, 2013):
+
+- 20 distinct 0.05° hotspot cells across lat 48.85–49.30, lon −124.55 to
+  −122.95
+- All-pairs network CC at PGC + LZB, threshold CC ≥ 0.75
+- After excluding the >200-member transitively-merged super-cluster
+  (over-bridging at lower thresholds), **35 cross-year tight repeating
+  patches survive**
+
+Patch distribution (from `data/detected_patches.csv` and figure
+`figures/smoke_all_patches_map.png`):
+
+- Spread across lat 48.40°–49.02° (~70 km N–S), lon −124.28° to −123.64°
+  (~50 km E–W)
+- Top patch (id 37): 101 members across 5 years
+- Most are 3–5 members each (limited by the 6000-event sample)
+- Lin's location precision (~5–10 km per detection) gives apparent
+  per-patch std of 0.2–0.5° even for truly co-located events — the
+  waveform CC is the authoritative same-source criterion
+
+Cartopy map (`figures/smoke_map_cartopy.png` and
+`figures/smoke_all_patches_map.png`) shows the patches concentrated
+between PGC, LZB, and NLLB — the area where these stations can sense
+LFE coda above noise.
+
+The original 7 families are a subset of these 35 — specifically the
+densest sub-clusters at the central hotspot. The wider survey reveals
+the full network of patches detectable at PGC + LZB.
+
+### E.7k Extension to 2005-2026 at PGC
+
+Fetched continuous PGC data for May–Nov each year 2014–2026 (the months
+where N. Cascadia ETSs cluster). Now have **2,469 PGC day-files spanning
+2005-09 through 2026-05** (29 GB total).
+
+Channel timeline at PGC:
+- 1999–2017-08: BHZ at 40 Hz
+- 2017-08-onward: HHZ at 100 Hz (we resample to 40 Hz for consistency)
+
+Running the matched filter for all 35 patch templates against all 2,469
+PGC days → expected detection catalog of order 10^7 events across 21 years.
+This is the input to:
+
+- Per-patch detection rate time series (when did each patch fire over the
+  21 years?)
+- ETS cycle identification from rate (expect ~15 N. Cascadia ETSs 2005-2026)
+- Per-patch daily dv/v across the full record
+- Spatial dv/v "movie" — each ETS as one frame, 35 patches as 35 pixels
+
+This is the multi-decadal, multi-patch product the project has been
+building toward. (See also Section 0 for the fisheye-camera intuition.)
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
