@@ -266,7 +266,38 @@ a measurement at the same time, they agree on the value.
 Scaling from top 30 to all 217 families increases per-bin measurements 7×.
 Expected to tighten the upper bound by ~√7 ≈ 2.6×, into the ~0.1 % range,
 sufficient to test the hypothesis that Cascadia ETS produces a Mexico-style
-dv/v drop.
+dv/v drop. Phase D stacking refactored for true (family, station) parallelism
+(`stack_all_parallel`): all 1,302 stacking tasks submitted up-front rather
+than per-family batches of 6, yielding ~8× speedup on the 48-worker pool.
+
+### Per-family analysis (Phase B follow-up)
+
+Splitting the Phase B parquet by family and computing each family's mean
+ETS-window dv/v minus its mean reference-window dv/v shows **per-family
+excursions of order ±1 %, with mixed signs across nearby families**:
+
+| family | lat   | lon     | depth (km) | ETS Δdv/v | SNR  |
+|--------|-------|---------|------------|-----------|------|
+| L0001  | 48.90 | −123.80 | 22         | −1.07 %   | 6.6  |
+| L0005  | 49.32 | −123.90 | 24         | +1.54 %   | 5.6  |
+| L0000  | 49.32 | −123.80 | 33         | −1.30 %   | 5.5  |
+| L0003  | 48.90 | −123.70 | 22         | +1.40 %   | 2.9  |
+
+A real medium-velocity change should be coherent across nearby families
+(overlapping coda volumes). The mixed signs in adjacent locations point to
+**source heterogeneity within our 0.1° grid families** — at this clustering
+resolution we are lumping multiple physically distinct LFE patches together,
+and changes in their relative contributions to the bin-stack masquerade as
+"apparent dv/v". Quantitative aggregate stays within ±0.3 % because these
+opposite-sign per-family excursions average down.
+
+Refinements that would address this:
+- Cluster Lin's detections by *waveform similarity* (not just lat/lon) to
+  recover Bostock-style families.
+- Tighten the spatial cell to 0.05° and require min_n higher to avoid
+  swallowing dissimilar sub-patches.
+- Restrict the analysis to families whose detection waveforms have high
+  intra-family cross-correlation (a station-level repeatability test).
 
 ---
 
