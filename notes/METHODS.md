@@ -261,14 +261,35 @@ a measurement at the same time, they agree on the value.
   bound).
 - Figure: `figures/smoke_phaseC_dvv.png`.
 
-### Phase D — all 217 families (in progress)
+### Phase D — all 217 families
 
-Scaling from top 30 to all 217 families increases per-bin measurements 7×.
-Expected to tighten the upper bound by ~√7 ≈ 2.6×, into the ~0.1 % range,
-sufficient to test the hypothesis that Cascadia ETS produces a Mexico-style
-dv/v drop. Phase D stacking refactored for true (family, station) parallelism
-(`stack_all_parallel`): all 1,302 stacking tasks submitted up-front rather
-than per-family batches of 6, yielding ~8× speedup on the 48-worker pool.
+Scaled from top 30 to all 217 families. Stacking refactored for true
+(family, station) parallelism (`stack_all_parallel`): all 1,302 tasks
+submitted up-front rather than per-family batches of 6, ~8× wall-clock
+speedup. All 217 family HDF5 stacks built in 580 s on the 48-worker pool;
+709 MB total.
+
+Measurement on the full stack set:
+
+- **5,948 dv/v rows** (7× Phase B's 856).
+- **Per-bin sample size**: 20–40 measurements per ETS-window bin (vs Phase B's 2–6).
+- **ETS-window dv/v: mean = +0.043 %, median = +0.148 %, std = 1.18 %**.
+  Per-bin standard error of the mean ≈ 1.18 / √27 ≈ 0.23 %. The Gaussian-
+  smoothed series stays within **±0.2 % through the ETS interval**.
+- Spatial coherence QC: 89 % of 1,334 bins coherent across stations.
+- Figure: `figures/smoke_phaseD_dvv.png`.
+
+**Headline numerical result:** for the 2010-08-15 → 2010-09-15 V.I. ETS,
+the LFE-CWI measurement at 6 V.I./Olympic broadbands gives
+
+    |dv/v| < 0.2 %   (smoothed)
+    mean ETS dv/v = +0.04 ± 0.05 %   (1-sigma SE on the ETS-wide mean)
+
+The data are consistent with **no detectable sustained ETS-wide dv/v
+signature** at this sensitivity. Per-family excursions exist at the ~±1 %
+level but with mixed signs across adjacent families (see per-family note
+above) — consistent with the diagnosed source-heterogeneity issue in the
+0.1° clustering, not with a coherent medium velocity change.
 
 ### Per-family analysis (Phase B follow-up)
 
