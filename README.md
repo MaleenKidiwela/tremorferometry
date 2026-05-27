@@ -10,48 +10,67 @@ plate interface across ETS cycles. LFEs sit on the megathrust / transition
 zone, so the dv/v sensitivity kernel is biased toward the slipping patch —
 distinct from ambient-noise dv/v, which is dominated by shallow crust.
 
-## v1 result (2010-08 V.I. ETS): a tight null bound
+## v1 results (S. V.I., 2010-2013 ETS cycles)
 
-**Headline:** for the 2010-08-15 → 2010-09-15 V.I. ETS, the tremor-CC
-measurement at 6 broadband stations gives
+**Two independent methods, consistent null.**
 
-    dv/v = +0.0003 +/- 0.0075 %     (1-sigma SE on the ETS-wide mean)
-    2-sigma upper bound:  |dv/v| < 0.015 %
+**Method A — tremor-windowed inter-station CC** (Phase E.6):
+    dv/v = +0.0003 +/- 0.0075 %  (within the 2010-08 ETS)
+    2-sigma upper bound: |dv/v| < 0.015 %
 
-That's ~13× tighter than the Mexican Guerrero SSE signal (~−0.2 % drop), and
-**robust per-pair** (every one of 12 station pairs is consistent with zero at
-95 % CI, with no distance-dependent pattern — `figures/smoke_tremor_cc_per_pair_distance.png`).
+**Method B — repeating LFE coda-wave interferometry** (Phase E.7e-g, the
+breakthrough): proper Shelly-Beroza-style network autocorrelation discovered
+**16 cross-year LFE families** at southern V.I. (CC ≥ 0.7 at PGC + LZB),
+with members spanning **2005–2013** (up to 8-year baselines). Multi-seed
+matched-filter then grew the catalog to **~17,000 LFE detections across 4 ETS
+cycles**. Stretching per-family year-stacks against 2010 reference:
 
-The data are consistent with **no detectable sustained ETS-wide medium dv/v
-above ~0.015 %** averaged over our southern-V.I. station-pair coverage.
+    2011 vs 2010 ETS:  dv/v = -0.054 +/- 0.291 %
+    2012 vs 2010 ETS:  dv/v = +0.033 +/- 0.406 %
+    2013 vs 2010 ETS:  dv/v = -0.246 +/- 0.297 %
 
-### How we got there (two attempts; second worked)
+All consistent with zero within 1σ. Per-family CC matches are 0.93+ — the
+templates are real, the measurement is between actual same-source events.
 
-**LFE coda-wave interferometry (walked back).** We built the full LFE-CWI
-pipeline using Lin (2023)'s Zenodo LFE catalog at 0.1° grid clustering.
-The pipeline runs and produces values, but when we tested the foundational
-CWI assumption (that LFE detections in each "family" are repeating sources)
-it failed — detection-to-detection direct-phase CC is essentially zero
-even with time-shift allowance. The Phase A–D dv/v numbers were stretching
-on source-mixture variations, not medium changes. See METHODS § Phase D QC.
+**Conclusion:** the southern V.I. plate interface does not show a
+detectable dv/v signal at ~0.3 % across 2010-2013 ETS cycles. Either the
+real change is below that floor, or it's spatially localized below our
+per-family resolution. Two methods agree.
 
-**Tremor-windowed inter-station CC (the actual measurement).** Pivoted to
-treating PNSN tremor windows as a distributed source field on the plate
-interface and cross-correlating between stations to recover Green's-function-
-like CC traces. This does *not* require repeating sources, and inherently
-biases the sensitivity toward the megathrust depth (since that's where the
-tremor radiates from). Mean CC across all bins = 0.67 (real coherent signal,
-vs 0.42 for LFE-CWI stacks).
+### The path (LFE-CWI eventually worked — with the right methodology)
 
-Two methodology fixes made the result trustworthy:
-1. **Signal-rich reference.** Building the reference from a fixed pre-ETS
-   time window produced a spurious −0.11 % "signal" because the pre-ETS
-   period had very few tremor windows — the "reference CC" was noise.
-   Using the densest-tremor bins as reference instead resolves this.
-2. **Symmetric coda.** Using both positive AND negative lag windows in the
-   stretching cuts the SE roughly in half for free.
+The first LFE-CWI attempt (using Lin's catalog binned at 0.1°) **failed**
+because at that clustering grain, detections within a "family" are NOT
+waveform-repeating sources. The early Phase A–D numbers were stretching
+on source-mixture variation, not medium change.
 
-See `notes/METHODS.md` § Phase E for the full arc.
+The pivot to **tremor-windowed inter-station CC** (Method A above) gave
+the first clean null bound — does not require repeating sources, biases
+sensitivity to the megathrust depth via the tremor source field.
+
+Then the proper LFE-CWI was rescued (Method B) with the Shelly-Beroza
+recipe in `src/tremorferometry/repeater.py`:
+1. Envelope-peak alignment (don't trust Lin's OT — find the direct phase).
+2. Tight 2-sec window (not 6 s of band-limited noise).
+3. Network CC at PGC + LZB with shift allowance.
+4. Strict threshold CC ≥ 0.7.
+5. Hotspot focus.
+
+Result: 16 cross-year families found in seed analysis; matched-filter then
+grew them to ~17,000 detections. See `notes/METHODS.md` § Phase E for the
+full arc.
+
+### Margin-wide and 2026 extension
+
+The pipeline is region-agnostic. To extend everywhere in Cascadia / to 2026:
+
+- **Southern V.I.** (have): use Lin (2023) catalog.
+- **Olympic / SW Washington**: Sweet et al. (2019) catalog (9 LFE families).
+- **N California**: Plourde (2015) and Ducellier (2022).
+- **Central Oregon gap** and **2014-onward** beyond Lin's coverage: use
+  `src/tremorferometry/detect.py` (envelope peaks inside PNSN tremor
+  windows) to seed `repeater.py` on continuous data. PNSN tremor catalog
+  covers all of Cascadia continuously through 2026.
 
 ### Figures
 
