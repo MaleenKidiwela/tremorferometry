@@ -186,6 +186,20 @@ def main():
 
     print("[4/4] Plotting...")
     dates = pd.to_datetime(daily_dates)
+    # Place each observed daily stack at its true calendar position; missing
+    # days are NaN so the image is honest about coverage gaps (otherwise
+    # imshow stretches rows uniformly across the y-extent and hides gaps).
+    day_min = dates.min().normalize()
+    day_max = dates.max().normalize()
+    all_days = pd.date_range(day_min, day_max, freq="D")
+    img = np.full((len(all_days), daily_arr.shape[1]), np.nan, dtype=np.float32)
+    idx = np.searchsorted(
+        all_days.values.astype("datetime64[D]"),
+        dates.values.astype("datetime64[D]"),
+    )
+    img[idx] = daily_arr
+    coverage_pct = 100 * len(daily_arr) / len(all_days)
+
     fig = plt.figure(figsize=(11, 9))
     gs = fig.add_gridspec(2, 2, height_ratios=[1, 6], width_ratios=[40, 1],
                           hspace=0.05, wspace=0.04)
@@ -198,20 +212,22 @@ def main():
     ax0.set_ylabel("ref (a.u.)")
     ax0.set_title(
         f"{args.template} ({args.network}.{args.station}): {len(daily_arr)} daily L2-normed stacks "
-        f"({df['time'].min().date()} – {df['time'].max().date()}), "
+        f"at calendar position\n"
+        f"({df['time'].min().date()} - {df['time'].max().date()}, "
+        f"{coverage_pct:.1f}% calendar-day coverage), "
         f"bandpass {args.fmin}-{args.fmax} Hz, cc>={args.cc_min}"
     )
     plt.setp(ax0.get_xticklabels(), visible=False)
 
     ax1 = fig.add_subplot(gs[1, 0], sharex=ax0)
-    # convert dates to ordinal floats for imshow extents
-    date_nums = mdates.date2num(dates.to_pydatetime())
-    # we plot with imshow using row index, then map ticks to dates
-    vmax = float(np.percentile(np.abs(daily_arr), 99))
+    date_nums = mdates.date2num(all_days.to_pydatetime())
+    vmax = float(np.nanpercentile(np.abs(img), 99))
+    cmap = plt.get_cmap("RdBu_r").copy()
+    cmap.set_bad("white")
     im = ax1.imshow(
-        daily_arr,
+        img,
         aspect="auto",
-        cmap="RdBu_r",
+        cmap=cmap,
         vmin=-vmax, vmax=vmax,
         extent=[t_axis[0], t_axis[-1], date_nums[-1], date_nums[0]],
         interpolation="nearest",
