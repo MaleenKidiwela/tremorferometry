@@ -6,6 +6,50 @@ Vancouver Island; the architecture extends margin-wide for future work.
 
 ---
 
+## 0. The intuitive picture: a fisheye camera looking down at the megathrust
+
+Each (LFE patch, station) pair is one **pixel** of an integrated measurement.
+35 patches × 1 station (PGC) = 35 pixels of a time-lapse image of the
+subsurface. The set of pixels together is like a **fisheye lens at PGC looking
+down at the plate interface**, sampling at 35 spots scattered across southern
+Vancouver Island.
+
+What each pixel actually is:
+
+- Not a sharp ray — it's a fuzzy 3D **sensitivity kernel** between the source
+  patch (on the plate interface ~30 km depth) and the station at the surface,
+  weighted by where the coda waves spend their time scattering.
+- For each ~2-second coda window the kernel covers a roughly tens-of-km-wide
+  tube between source and receiver, biased heavily toward depths near the
+  source.
+
+The time-lapse:
+
+- Each ETS cycle is an "exposure": stack a patch's detections during that ETS
+  and measure dv/v vs a reference.
+- Comparing exposures across ETSs (every ~14 months in N. Cascadia) gives a
+  movie of how the subsurface has changed cycle to cycle.
+- Patches whose dv/v changes during a specific ETS show **where in the crust
+  the medium was perturbed by that slow-slip event**.
+
+Spatial coverage with one station:
+
+- All 35 pixels converge at PGC and fan out to the patches
+- One station = fan-shaped 1-sided image, no crossing rays → no 3D inversion
+- Add more stations and the rays start crossing at different angles → solve
+  for the dv/v field in 3D (true tomography). The natural extension of this
+  work.
+
+Why this is the right kind of measurement:
+
+- The LFE coda samples the plate interface preferentially (kernel peaks near
+  the source depth)
+- The repeating-source property guarantees that any waveform change is a
+  medium change, not a source change
+- Once we have the catalog of repeating patches, the rest is *just* stacking
+  + stretching: a clean, well-understood signal-processing chain that turns
+  decades of continuous seismic data into a series of subsurface snapshots
+
 ## 1. Scientific premise
 
 Cascadia ETS is a slow-slip phenomenon: tens of millimeters of along-strike slip
