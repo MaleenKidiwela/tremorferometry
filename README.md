@@ -10,44 +10,56 @@ plate interface across ETS cycles. LFEs sit on the megathrust / transition
 zone, so the dv/v sensitivity kernel is biased toward the slipping patch —
 distinct from ambient-noise dv/v, which is dominated by shallow crust.
 
-## v1 result (2010-08 V.I. ETS) — pipeline works; assumption broken
+## v1 result (2010-08 V.I. ETS): a tight null bound
 
-We built and ran the full end-to-end pipeline on the Aug-Sep 2010 V.I. ETS:
+**Headline:** for the 2010-08-15 → 2010-09-15 V.I. ETS, the tremor-CC
+measurement at 6 broadband stations gives
 
-![Phase D dv/v figure](figures/smoke_phaseD_dvv.png)
+    dv/v = +0.0003 +/- 0.0075 %     (1-sigma SE on the ETS-wide mean)
+    2-sigma upper bound:  |dv/v| < 0.015 %
 
-- 217 LFE "families" (0.1° grid bins) × 6 V.I./Olympic broadbands × 76 two-day
-  bins → 5,948 dv/v measurements via stretching.
-- All QC checks defined in `qc.py` pass (spatial coherence 89%, coda-window
-  stability across [18,30] / [20,32] / [22,34] s).
+That's ~13× tighter than the Mexican Guerrero SSE signal (~−0.2 % drop), and
+**robust per-pair** (every one of 12 station pairs is consistent with zero at
+95 % CI, with no distance-dependent pattern — `figures/smoke_tremor_cc_per_pair_distance.png`).
 
-**Critical caveat:** when we then verified the foundational CWI assumption —
-that detections in each "family" produce a repeating waveform — we found
-that **they don't** (see `figures/smoke_family_similarity.png` and
-`figures/smoke_reclust_L0000_PGC.png`):
+The data are consistent with **no detectable sustained ETS-wide medium dv/v
+above ~0.015 %** averaged over our southern-V.I. station-pair coverage.
 
-- Bin-to-bin coda CC within a single 0.1° family is essentially zero
-  (mean −0.002, 0 % of pairs above 0.5).
-- Detection-to-detection direct-phase CC across the 2,365 detections in
-  the densest cell L0000 has **0 %** of pairs above CC 0.5, even with
-  ±2 s time-shift allowance.
+### How we got there (two attempts; second worked)
 
-So the numerical dv/v values reported above are statistically valid
-stretching computations on the bin-stacks, but each bin-stack is a *different
-mixture of distinct LFE sub-sources*, not a measurement of the same
-repeating LFE. The values measure source-mixture noise, not medium dv/v.
+**LFE coda-wave interferometry (walked back).** We built the full LFE-CWI
+pipeline using Lin (2023)'s Zenodo LFE catalog at 0.1° grid clustering.
+The pipeline runs and produces values, but when we tested the foundational
+CWI assumption (that LFE detections in each "family" are repeating sources)
+it failed — detection-to-detection direct-phase CC is essentially zero
+even with time-shift allowance. The Phase A–D dv/v numbers were stretching
+on source-mixture variations, not medium changes. See METHODS § Phase D QC.
 
-The path to a real measurement requires either:
+**Tremor-windowed inter-station CC (the actual measurement).** Pivoted to
+treating PNSN tremor windows as a distributed source field on the plate
+interface and cross-correlating between stations to recover Green's-function-
+like CC traces. This does *not* require repeating sources, and inherently
+biases the sensitivity toward the megathrust depth (since that's where the
+tremor radiates from). Mean CC across all bins = 0.67 (real coherent signal,
+vs 0.42 for LFE-CWI stacks).
 
-1. Waveform-similarity reclustering (network autocorrelation a la
-   Brown-Beroza-Shelly 2008) to recover real Bostock-style families from
-   the continuous data;
-2. Obtaining Bostock's published family templates (not openly hosted);
-3. Pivoting to ambient-noise CWI for the same period (loses plate-interface
-   sensitivity).
+Two methodology fixes made the result trustworthy:
+1. **Signal-rich reference.** Building the reference from a fixed pre-ETS
+   time window produced a spurious −0.11 % "signal" because the pre-ETS
+   period had very few tremor windows — the "reference CC" was noise.
+   Using the densest-tremor bins as reference instead resolves this.
+2. **Symmetric coda.** Using both positive AND negative lag windows in the
+   stretching cuts the SE roughly in half for free.
 
-See `notes/METHODS.md` for the full methods, results, the diagnostic that
-turned up this finding, and the v2 plan.
+See `notes/METHODS.md` § Phase E for the full arc.
+
+### Figures
+
+- `figures/smoke_tremor_cc_dvv_v2.png` — main result (aggregate dv/v vs time with LFE-rate panel)
+- `figures/smoke_tremor_cc_per_pair_distance.png` — per-pair robustness
+- `figures/smoke_tremor_cc_preprocess_compare.png` — preprocessing tradeoff
+- `figures/smoke_family_similarity.png`, `figures/smoke_reclust_L0000_PGC.png` —
+  diagnostics that walked back the LFE-CWI approach
 
 ## Catalogs
 
