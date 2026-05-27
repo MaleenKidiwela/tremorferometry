@@ -988,6 +988,97 @@ This is the input to:
 This is the multi-decadal, multi-patch product the project has been
 building toward. (See also Section 0 for the fisheye-camera intuition.)
 
+### E.7l Canonical CWI reference at 51 patches (all-time mean LFE)
+
+After PNSN-driven self-detection (E.7i) and strict complete-linkage filtering
+turned up **16 new cross-year families post-2014** to add to the 35
+Lin-seeded ones, we standardized on the canonical CWI reference: per
+(family, station), the reference is the L2-normalized sum of every L2-normed
+LFE detection in that family across the record, weighted by daily count.
+
+Phrasing: "how much does the velocity on this path change relative to the
+*average propagating LFE* for this family?"
+
+Computation (per family):
+
+```
+ref_unnormalized = sum_d (daily_sum_of_L2_normed_cuts[d])  /  total_LFE_count
+                 = average LFE waveform across the entire record
+day_stack[d]     = sum_d_cuts / n_det[d]
+dvv[d]           = stretch_dvv(ref, day_stack[d],
+                               t_min=0, t_max=2,  ← direct-S window
+                               eps_max=0.02, n_eps=401)
+keep if cc_max >= 0.8
+```
+
+Result (`data/daily_dvv_51_alltime_ref.csv`): 123,793 daily dv/v
+measurements across 50 patches (one new family dropped for insufficient
+data); mean stretching CC = 0.993; per-day dv/v 5–95%ile = -0.18% / +0.14%;
+per-patch long-term mean ≈ 0 by construction.
+
+Figure `figures/smoke_dvv_51_alltime_ref.png`: per-patch 60-day rolling
+medians for both the Lin-seeded 35 and the strict-new 16, plus the
+cross-patch median (essentially flat at 0 across 21 years). Per-patch
+dv/v stays within ~±0.1% of the long-term mean across 21 years.
+
+### E.7m Long-window image plot of one family (PGC_79)
+
+For the largest single LFE family at PGC (`orig_79`, 872 k detections,
+21-year record), built a record-section image:
+
+- Re-cut each detection from continuous data over a **long window
+  −3 to +10 s** around the envelope-peak alignment time (bandpass 2–8 Hz,
+  L2-norm).
+- Sum/normalize per calendar day → 4,775 daily L2-normed stacks.
+- Place each daily stack at its **true calendar y-position** (NaN-fill
+  missing days) so the image is honest about coverage gaps.
+
+**Coverage caveat caught here.** A first version used
+`imshow(stacks, extent=[..., date_first, date_last])` which evenly
+distributes 4,775 rows across the date range — combined with
+`interpolation='nearest'`, the empty 2006–2009 band got painted with
+the nearest observed row, faking continuous coverage. The honest
+calendar-grid version shows that **actual coverage at PGC is 63.1%** of
+the calendar span — a big gap 2005–2010 and ETS-only intermittent
+coverage 2010–2013 (we only fetched waveforms for ETS-active months
+back then), then dense 2014–2026.
+
+Figure `figures/smoke_long_window_image_PGC_79.png`. Visually the
+direct-S band (0–2 s) is a tight vertical stripe across all years;
+faint coda extends out to ~5 s.
+
+### E.7n Coda window beats direct-S — the textbook CWI choice
+
+After noticing in the PGC_79 dv/v time series (`smoke_dvv_PGC_79.png`)
+that the direct-S (0–2 s) dv/v measurement showed conspicuous
+**negative excursions concentrated during ETS-time LFE bursts**
+(distribution skewed asymmetrically negative: median -0.005%, 5–95%ile
+-0.16 / -0.004%), redid the same measurement using the early-coda
+window 1–3 s (same reference, same CC≥0.8 filter).
+
+| Window | median dv/v | 5–95%ile | mean stretching CC |
+|--------|-------------|----------|--------------------|
+| 0–2 s (direct pulse) | -0.005% | -0.16 / -0.004% (asymmetric) | 0.997 |
+| 1–3 s (early coda)   | +0.004% | -0.10 / +0.09%   (symmetric) | 0.985 |
+
+**The ETS-time "drops" go away in the coda.** Most likely they were
+direct-S **waveform-shape changes** (slight sub-source mixture
+differences during high-activity bursts within a family), not medium
+velocity changes. Coda waves average over many scattering paths and
+reject that contamination. This is exactly what classical CWI theory
+warns about: stretch the coda, not the direct phase.
+
+**Methodological consequence.** The 51-patch all-time-ref dv/v product
+above used the 0–2 s direct-S window for symmetry with template length;
+any apparent ETS-time signal in it is suspect and should be re-checked
+against a coda-window redo. Default stretching window going forward:
+**1–3 s after envelope-peak alignment**, with the long-window data
+products (`data/long_window_daily_<TEMPLATE>.npz`) as the source rather
+than the short 2-s daily-stack npz.
+
+Figure `figures/smoke_dvv_PGC_79_window_compare.png`: side-by-side
+1–3 s vs 0–2 s scatter for PGC_79 makes the contamination obvious.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
@@ -1000,6 +1091,20 @@ building toward. (See also Section 0 for the fisheye-camera intuition.)
 3. **Preprocessing matters in the opposite direction from ambient noise.**
    For tremor, raw bandpass beats one-bit / running-mean — the coherent
    direct phase IS the signal, not something to suppress.
+4. **Stretch the coda, not the direct phase (E.7n).** Even when LFE
+   templates are envelope-aligned and the direct-S pulse is the highest-CC
+   feature, dv/v measured on it is contaminated by source-pulse-shape
+   changes (e.g. sub-source mixture during ETS bursts). The coda — a few
+   seconds *after* the direct-S — is the medium probe. Direct-pulse
+   stretching can manufacture an ETS-correlated dv/v "signal" that is not
+   in the coda.
+5. **An image plot stretched on row index can hide gaps.** When plotting
+   day-stacks vs date with imshow + a date extent, the rows are spread
+   uniformly through the y-range and nearest-neighbor interpolation
+   paints empty time intervals with whichever observed row is closest.
+   Always either place rows at their true calendar index with NaN gaps,
+   or use pcolormesh with explicit y-coords, before reading coverage off
+   the plot.
 
 ## 6. What's next
 
