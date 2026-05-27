@@ -152,6 +152,9 @@ def stack_all_parallel(
     out_dir: Path,
     fs: float = 100.0,
     n_workers: int = 32,
+    pre_s: float = 2.0,
+    post_s: float = 30.0,
+    bandpass: tuple[float, float] = (2.0, 8.0),
 ) -> list[Path]:
     """Run `stack_family_station` over all pairs in parallel; write one HDF5 per family."""
     families = list(families)
@@ -167,6 +170,10 @@ def stack_all_parallel(
                     sta,
                     waveform_root,
                     bin_edges,
+                    pre_s,
+                    post_s,
+                    bandpass,
+                    fs,
                 ): sta
                 for sta in stations
             }

@@ -32,6 +32,12 @@ def main() -> None:
     ap.add_argument("--selected", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--workers", type=int, default=32)
+    ap.add_argument("--fs", type=float, default=40.0,
+                    help="Target sampling rate (matches BHZ at 40 Hz for 2010 V.I.)")
+    ap.add_argument("--pre-s", type=float, default=5.0,
+                    help="Seconds before each detection time (origin time) to start the cut")
+    ap.add_argument("--post-s", type=float, default=35.0,
+                    help="Seconds after each detection time to end the cut")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -70,6 +76,10 @@ def main() -> None:
         bin_edges=edges,
         out_dir=args.out,
         n_workers=args.workers,
+        fs=args.fs,
+        pre_s=args.pre_s,
+        post_s=args.post_s,
+        bandpass=cfg.dvv.freq_band,
     )
     print(f"wrote {len(paths)} family HDF5 files to {args.out}")
 
