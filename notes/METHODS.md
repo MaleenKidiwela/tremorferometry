@@ -291,6 +291,25 @@ level but with mixed signs across adjacent families (see per-family note
 above) — consistent with the diagnosed source-heterogeneity issue in the
 0.1° clustering, not with a coherent medium velocity change.
 
+### Phase D QC — coda-window stability
+
+Re-running `measure_many` on the same Phase D stacks with three different
+coda windows:
+
+| coda window (s) | n_rows | mean CC | ETS mean dv/v       |
+|-----------------|--------|---------|---------------------|
+| [18, 30]        | 5,908  | 0.439   | +0.054 ± 0.057 %    |
+| [20, 32]        | 5,948  | 0.438   | +0.043 ± 0.056 %    |
+| [22, 34]        | 6,018  | 0.437   | +0.003 ± 0.056 %    |
+
+All three are consistent with zero within 1 σ, and the per-window means
+agree at the level of the standard error. The Gaussian-smoothed dv/v
+trajectories from the three windows track each other broadly (figure
+`figures/smoke_phaseD_codawindow.png`). A spurious "signal" from a single
+coda-window choice would not survive this test — the consistency across
+windows is the strongest confirmation that no ETS-wide medium-velocity
+change is detectable here above |dv/v| ≈ 0.1 %.
+
 ### Per-family analysis (Phase B follow-up)
 
 Splitting the Phase B parquet by family and computing each family's mean
