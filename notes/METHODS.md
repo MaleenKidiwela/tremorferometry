@@ -291,6 +291,48 @@ level but with mixed signs across adjacent families (see per-family note
 above) — consistent with the diagnosed source-heterogeneity issue in the
 0.1° clustering, not with a coherent medium velocity change.
 
+### Phase D QC — family-waveform similarity (the central finding)
+
+The Phase D pipeline assumed each Lin family at our 0.1° clustering would
+provide a repeating source — that is the prerequisite for coda-wave
+interferometry. We tested this directly.
+
+**Within-family bin-to-bin coda CC** (family L0000 at PGC, 59 bin-stacks):
+
+    mean CC = -0.002, median = -0.001, max off-diagonal ~ 0
+    fraction of bin pairs with CC > 0.5: 0 %
+    fraction of bin pairs with CC > 0.3: 0 %
+
+The bin-to-bin CC matrix is white noise except on the diagonal. There is no
+master-stack waveform that 2-day-bin stacks of L0000 converge to.
+
+**Within-family detection-to-detection CC** (L0000 at PGC, 2,365 detections
+each cut for an 8-second direct-phase window):
+
+    fraction of detection pairs with CC > 0.5: 0 %
+    Hierarchical clustering at CC > 0.5: 2,353 sub-clusters (largest n=2)
+
+Even with **time-shifted CC** allowing ±2 s alignment (which would absorb
+typical OT/depth uncertainty), the result is the same:
+
+    Time-shifted CC: mean=0.18, median=0.18, max across 125k pairs=0.525
+    Fraction of pairs above CC 0.5: 0 %
+    Fraction above 0.3: 0.6 %
+    Cluster at CC>0.3: 348 groups, largest n=5
+
+**Lin's catalog, at the 0.1° granularity we use, does NOT contain repeating
+sources.** Either the deep-learning-based detector finds many physically
+distinct LFE sub-patches per cell, or sub-cell timing/depth variability
+prevents the underlying waveforms from aligning even with time shifts.
+
+Consequence: the Phase A-D dv/v values are statistically valid stretching
+computations, but they measure **source-mixture variation between bins**, not
+medium velocity change. The +0.04 % / −0.03 % numerical results in earlier
+sections are not bounds on real Cascadia dv/v.
+
+Figures: `figures/smoke_family_similarity.png` (bin-to-bin CC matrix),
+`figures/smoke_reclust_L0000_PGC.png` (detection-to-detection CC matrix).
+
 ### Phase D QC — frequency-band split (2-4 vs 2-8 Hz)
 
 Re-stacking all 217 families at a narrower bandpass and re-measuring on those
