@@ -566,6 +566,36 @@ others, we would expect at least one pair to show it as a tight, distance-
 correlated offset. We see none. The null is robust per-pair, not just on
 average.
 
+### E.7b Finer-grid Lin clustering doesn't rescue LFE-CWI
+
+Hypothesis: maybe 0.1° (~10 km) cells lump multiple LFE patches, but finer
+cells (~2 km) would isolate single patches.
+
+Test: re-cluster Lin's catalog at **0.02°** with `min_n = 30`. Result:
+803 sub-families, top has 812 detections in a 2 km cell. Run network-CC
+clustering on those 812 detections:
+
+    CC > 0.4 threshold: 798 sub-clusters formed; largest has 3 members (0.4 %)
+    CC > 0.3 threshold:  34 sub-clusters formed; largest has 54 members (6.7 %)
+
+Even at 2 km, Lin's detections do NOT form coherent waveform-similar
+families. Either:
+  - Lin's DL detector picks up many physically distinct patches per 2 km cell
+    (geophysically reasonable — the plate interface is densely populated with
+    LFE sources), or
+  - location precision is finer than the catalog's lat/lon precision can
+    represent, so same-source detections are spread across nearby cells
+
+**Conclusion:** at any spatial binning of Lin's catalog tested (0.1°, 0.05°,
+0.02°), the resulting "families" don't satisfy the CWI repeating-source
+assumption. Real LFE-CWI for this region requires direct waveform clustering
+from continuous data (network autocorrelation; Brown-Beroza-Shelly 2008) or
+Bostock's own family templates from their publications. Both are substantial
+engineering efforts.
+
+The tremor-CC approach (Phase E.6) doesn't have this problem — it doesn't
+require repeating sources — and is the v1 working measurement.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
