@@ -26,15 +26,29 @@ def _load_day_filt(
     candidates = list(root.glob(f"*.{station}/{day.year}/{day.timetuple().tm_yday:03d}.mseed"))
     if not candidates:
         return None
-    st = read(str(candidates[0]))
+    try:
+        st = read(str(candidates[0]))
+    except Exception:
+        return None
     st = st.select(component="Z")
     if len(st) == 0:
         return None
-    st.merge(fill_value=0)
+    # Normalize sampling rates BEFORE merging (some files have slight FS jitter
+    # like 99.999... vs 100.0 across segments which breaks merge).
+    for tr in st:
+        if abs(tr.stats.sampling_rate - fs) > 1e-6:
+            try:
+                tr.resample(fs)
+            except Exception:
+                return None
+    try:
+        st.merge(fill_value=0)
+    except Exception:
+        return None
+    if len(st) == 0:
+        return None
     st.detrend("demean")
     st.filter("bandpass", freqmin=bandpass[0], freqmax=bandpass[1], corners=4, zerophase=True)
-    if abs(st[0].stats.sampling_rate - fs) > 1e-6:
-        st.resample(fs)
     tr = st[0]
     return tr.data.astype(np.float32), tr.stats.starttime
 
