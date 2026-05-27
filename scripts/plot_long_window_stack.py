@@ -187,9 +187,10 @@ def main():
     print("[4/4] Plotting...")
     dates = pd.to_datetime(daily_dates)
     fig = plt.figure(figsize=(11, 9))
-    gs = fig.add_gridspec(2, 1, height_ratios=[1, 6], hspace=0.05)
+    gs = fig.add_gridspec(2, 2, height_ratios=[1, 6], width_ratios=[40, 1],
+                          hspace=0.05, wspace=0.04)
 
-    ax0 = fig.add_subplot(gs[0])
+    ax0 = fig.add_subplot(gs[0, 0])
     ax0.plot(t_axis, ref, color="k", lw=0.8)
     ax0.axvline(0, color="C3", lw=0.5, alpha=0.5)
     ax0.axvspan(0, 2, color="grey", alpha=0.12)
@@ -202,7 +203,7 @@ def main():
     )
     plt.setp(ax0.get_xticklabels(), visible=False)
 
-    ax1 = fig.add_subplot(gs[1], sharex=ax0)
+    ax1 = fig.add_subplot(gs[1, 0], sharex=ax0)
     # convert dates to ordinal floats for imshow extents
     date_nums = mdates.date2num(dates.to_pydatetime())
     # we plot with imshow using row index, then map ticks to dates
@@ -221,13 +222,15 @@ def main():
     ax1.set_ylabel("date")
     ax1.set_xlabel("trace time relative to LFE alignment (s)  [stretching window: 0–2 s]")
     ax1.axvline(0, color="k", lw=0.4, alpha=0.4)
-    cbar = fig.colorbar(im, ax=ax1, pad=0.02)
+    ax1.axvspan(0, 2, color="grey", alpha=0.08)
+    ax1.tick_params(labelbottom=True)
+    cax = fig.add_subplot(gs[1, 1])
+    cbar = fig.colorbar(im, cax=cax)
     cbar.set_label("amplitude (L2-normed)")
 
-    fig.tight_layout()
     outp = Path(args.out)
     outp.parent.mkdir(exist_ok=True, parents=True)
-    fig.savefig(outp, dpi=150)
+    fig.savefig(outp, dpi=150, bbox_inches="tight")
     print(f"  wrote {outp}")
 
 
