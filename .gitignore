@@ -15,7 +15,8 @@ data/
 *.hdf5
 *.npy
 *.npz
-figures/
+figures/*
+!figures/smoke_*.png
 outputs/
 
 # OS / editor
