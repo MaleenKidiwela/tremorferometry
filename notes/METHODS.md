@@ -291,6 +291,41 @@ level but with mixed signs across adjacent families (see per-family note
 above) — consistent with the diagnosed source-heterogeneity issue in the
 0.1° clustering, not with a coherent medium velocity change.
 
+### Phase D QC — frequency-band split (2-4 vs 2-8 Hz)
+
+Re-stacking all 217 families at a narrower bandpass and re-measuring on those
+stacks. The per-family ETS dv/v statistics (aggregating each family's ETS-bin
+mean, then std across families) is the more honest SE because per-bin
+measurements within a family are correlated:
+
+| Bandpass  | families w/ETS data | per-family ETS dv/v   | per-family std | SE of family mean |
+|-----------|---------------------|-----------------------|----------------|-------------------|
+| 2-8 Hz    | 186                 | +0.048 %              | 0.891 %        | ±0.065 %          |
+| 2-4 Hz    | 216                 | **−0.032 %**          | **0.261 %**    | **±0.018 %**      |
+
+The 2-4 Hz band shows a **3.4× tighter per-family scatter** than 2-8 Hz, and
+the per-family ETS dv/v mean is **negative at ~1.7σ from zero** — the
+direction expected for slow-slip-induced velocity drop. This is the first
+hint of a directional signal we've seen.
+
+Two interpretations:
+1. LFE energy peaks in 2-4 Hz, so the stacks are higher-SNR there; the
+   per-family heterogeneity (driven by waveform-shape changes between
+   sub-patches) is suppressed at lower frequency where individual sub-patch
+   waveforms look more alike. Lower-frequency coda is also longer-lived
+   (less attenuated), giving more medium sampling per measurement.
+2. The 4-8 Hz band is dominated by scattered energy from small heterogeneities
+   that respond to source-location migration rather than bulk velocity change.
+
+The aggregate SE = 0.018 % is approaching the regime where the predicted
+~−0.1 % Mexican-style SSE dv/v drop would be detectable. The actual
+Cascadia 2010-08 measurement (−0.03 %) is smaller than that prediction by
+~3× — either the signal really is small, or our 0.1° family clustering
+still smears it down.
+
+Figures: `figures/smoke_phaseD_24Hz.png` (2-4 Hz aggregate),
+`figures/smoke_phaseD_freqband_compare.png` (side-by-side overlay).
+
 ### Phase D QC — coda-window stability
 
 Re-running `measure_many` on the same Phase D stacks with three different
