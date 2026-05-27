@@ -550,7 +550,23 @@ seen it easily. The data are consistent with **either no measurable
 deep dv/v during this ETS, or a dv/v smaller than 0.015 % averaged
 over our southern-V.I. station-pair coverage**.
 
-### E.7 Lessons
+### E.7 Per-pair robustness check
+
+Splitting the aggregate ETS dv/v by station pair (`figures/smoke_tremor_cc_per_pair_distance.png`):
+
+- 12 pairs with ≥2 ETS measurements each
+- Per-pair ETS dv/v ranges from −0.17 % (PGC-SNB, n=2, SE=0.18 %) to +0.34 %
+  (LZB-PGC, n=1) — but **every single pair is consistent with zero at 95 % CI**
+- No correlation with inter-station distance (25 – 146 km).
+- No outlier pair is driving the aggregate; the +0.0003 ± 0.0075 % aggregate
+  is honestly representative of every path we sample.
+
+If a real ~0.05 % medium velocity change existed in some sub-region but not
+others, we would expect at least one pair to show it as a tight, distance-
+correlated offset. We see none. The null is robust per-pair, not just on
+average.
+
+### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
    produces spurious dv/v signals from noise-pattern matching, with the
