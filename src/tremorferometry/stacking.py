@@ -161,36 +161,61 @@ def stack_all_parallel(
     pre_s: float = 2.0,
     post_s: float = 30.0,
     bandpass: tuple[float, float] = (2.0, 8.0),
+    progress_every: int = 25,
 ) -> list[Path]:
-    """Run `stack_family_station` over all pairs in parallel; write one HDF5 per family."""
+    """Run `stack_family_station` over all (family, station) pairs in parallel.
+
+    All tasks are submitted up-front so up to `n_workers` are active at once
+    (avoids the per-family barrier that limited concurrency to len(stations)).
+    Each family's HDF5 is written as soon as all its stations finish.
+    """
     families = list(families)
     stations = list(stations)
+    if not families or not stations:
+        return []
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    pending: dict[str, int] = {fid: len(stations) for fid in families}
+    results: dict[str, dict[str, dict[int, np.ndarray]]] = {fid: {} for fid in families}
     paths: list[Path] = []
+
     with ProcessPoolExecutor(max_workers=n_workers) as ex:
-        for family_id in families:
-            futures = {
-                ex.submit(
-                    stack_family_station,
-                    detections,
-                    family_id,
-                    sta,
-                    waveform_root,
-                    bin_edges,
-                    pre_s,
-                    post_s,
-                    bandpass,
-                    fs,
-                ): sta
-                for sta in stations
-            }
-            stacks_by_station: dict[str, dict[int, np.ndarray]] = {}
-            for f in as_completed(futures):
-                sta = futures[f]
+        futures = {
+            ex.submit(
+                stack_family_station,
+                detections,
+                fid,
+                sta,
+                waveform_root,
+                bin_edges,
+                pre_s,
+                post_s,
+                bandpass,
+                fs,
+            ): (fid, sta)
+            for fid in families
+            for sta in stations
+        }
+        completed_tasks = 0
+        total_tasks = len(futures)
+        for f in as_completed(futures):
+            fid, sta = futures[f]
+            try:
                 result = f.result()
-                if result:
-                    stacks_by_station[sta] = result
-            if stacks_by_station:
-                out_path = out_dir / f"{family_id}.h5"
-                write_stacks_hdf5(stacks_by_station, bin_edges, out_path, family_id, fs)
-                paths.append(out_path)
+            except Exception as e:  # noqa: BLE001
+                log.warning("stack failed family=%s station=%s: %s", fid, sta, e)
+                result = None
+            if result:
+                results[fid][sta] = result
+            pending[fid] -= 1
+            if pending[fid] == 0:
+                stacks_by_station = results.pop(fid)
+                if stacks_by_station:
+                    out_path = out_dir / f"{fid}.h5"
+                    write_stacks_hdf5(stacks_by_station, bin_edges, out_path, fid, fs)
+                    paths.append(out_path)
+            completed_tasks += 1
+            if completed_tasks % progress_every == 0 or completed_tasks == total_tasks:
+                log.info("stack progress: %d / %d tasks (%d families done)",
+                         completed_tasks, total_tasks, len(paths))
     return paths
