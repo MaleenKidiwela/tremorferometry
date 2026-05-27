@@ -91,14 +91,20 @@ def _bin_index(t: datetime | pd.Timestamp, edges: list[datetime]) -> int | None:
 
 
 def _load_day_stream(
-    root: Path, station: str, day: datetime, bandpass: tuple[float, float], fs: float
+    root: Path, station: str, day: datetime, bandpass: tuple[float, float], fs: float,
+    component: str = "Z",
 ):
+    """Return the day's stream restricted to one component (Z by default)."""
     from obspy import read
 
     candidates = list(root.glob(f"*.{station}/{day.year}/{day.timetuple().tm_yday:03d}.mseed"))
     if not candidates:
         return None
     st = read(str(candidates[0]))
+    # restrict to the requested component before any processing
+    st = st.select(component=component)
+    if len(st) == 0:
+        return None
     st.merge(fill_value=0)
     st.detrend("demean")
     st.filter("bandpass", freqmin=bandpass[0], freqmax=bandpass[1], corners=4, zerophase=True)
