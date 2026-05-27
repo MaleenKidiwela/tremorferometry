@@ -112,41 +112,29 @@ def main():
         s = d.set_index("date")["dvv_pct"].sort_index()
         return s.rolling("60D", min_periods=10).median()
 
-    fig, axes = plt.subplots(2, 1, figsize=(13, 8), sharex=True,
-                             gridspec_kw=dict(hspace=0.1))
-
-    for ax, label, prefix in zip(
-        axes, ["Original 35 (Lin-seeded)", "New strict 16 (PNSN-discovered)"],
-        ["PGC_", "STRICT_"]
-    ):
-        n_patches = 0
-        for tmpl in sorted(df["patch"].unique()):
-            if not tmpl.startswith(prefix):
-                continue
-            sub = df[df["patch"] == tmpl].sort_values("date")
-            if len(sub) < 30:
-                continue
-            roll = sub.set_index("date")["dvv_pct"].rolling("60D", min_periods=10).median()
-            ax.plot(roll.index, roll.values, alpha=0.22, lw=0.6)
-            n_patches += 1
-        m_coda = cross_patch_median(df, prefix)
-        ax.plot(m_coda.index, m_coda.values, color="k", lw=1.6,
-                label="cross-patch 60-d median")
-        ax.axhline(0, color="r", lw=0.6, alpha=0.7)
-        ax.set_ylabel("dv/v (%)")
-        ax.set_ylim(-0.1, 0.1)
-        ax.grid(True, alpha=0.3)
-        ax.set_title(f"{label} -- {n_patches} patches")
-        ax.legend(loc="upper right", fontsize=9)
-
-    axes[-1].set_xlabel("date")
-    axes[-1].xaxis.set_major_locator(mdates.YearLocator(2))
-    axes[-1].xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    fig.suptitle(
-        f"PGC dv/v on coda window {w_lo}-{w_hi} s (all-time-mean LFE reference)  "
-        f"-- {len(df)} measurements, mean cc {df['cc_max'].mean():.3f}",
-        y=0.995,
+    fig, ax = plt.subplots(1, 1, figsize=(13, 5.5))
+    n_patches = 0
+    for tmpl in sorted(df["patch"].unique()):
+        sub = df[df["patch"] == tmpl].sort_values("date")
+        if len(sub) < 30:
+            continue
+        roll = sub.set_index("date")["dvv_pct"].rolling("60D", min_periods=10).median()
+        ax.plot(roll.index, roll.values, alpha=0.22, lw=0.6)
+        n_patches += 1
+    m = cross_patch_median(df, None)
+    ax.plot(m.index, m.values, color="k", lw=1.8, label="cross-patch 60-d median")
+    ax.axhline(0, color="r", lw=0.6, alpha=0.7)
+    ax.set_ylabel("dv/v (%)")
+    ax.set_ylim(-0.1, 0.1)
+    ax.grid(True, alpha=0.3)
+    ax.set_xlabel("date")
+    ax.xaxis.set_major_locator(mdates.YearLocator(2))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    ax.set_title(
+        f"PGC dv/v on coda window {w_lo}-{w_hi} s, all-time-mean LFE reference  --  "
+        f"{n_patches} patches, {len(df):,} measurements, mean cc {df['cc_max'].mean():.3f}"
     )
+    ax.legend(loc="upper right", fontsize=9)
     fig.tight_layout()
     fig.savefig(args.out_fig, dpi=150)
     print(f"  wrote {args.out_fig}")
