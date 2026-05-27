@@ -19,6 +19,11 @@ figures/*
 !figures/smoke_*.png
 outputs/
 
+# Catalog CSVs are reproducible from PNSN API + Bostock supplement;
+# don't ship the data, just the code that fetches it.
+catalogs/*.csv
+catalogs/*.parquet
+
 # OS / editor
 .DS_Store
 .vscode/

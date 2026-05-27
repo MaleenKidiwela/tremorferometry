@@ -1,0 +1,29 @@
+# v1 target: Sep-Oct 2025 northern Cascadia ETS (largest recent episode in the
+# PNSN tremor catalog at the time of scoping). Bbox covers Vancouver Island
+# through the Olympic Peninsula.
+event_id: ets_2025_sep_vi
+
+episode:
+  t_start: 2025-09-18
+  t_end:   2025-10-23
+  bbox:    [47.30, 49.70, -126.20, -122.20]
+
+stations:
+  network: CN,UW
+  list:    [SNB, PGC, LZB, TWKB, TWBB]
+
+match:
+  cc_threshold: 0.4
+  mad_multiplier: 8
+
+stack:
+  bin_days: 2
+
+dvv:
+  coda_window:      [5.0, 25.0]
+  freq_band:        [2.0, 8.0]
+  stretch_range:    0.02
+  stretch_steps:    201
+  min_detections:   20
+  min_cc:           0.6
+  reference_window: [-90, -30]

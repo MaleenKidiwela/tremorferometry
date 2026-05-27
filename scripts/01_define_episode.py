@@ -24,14 +24,33 @@ def main() -> None:
     ap.add_argument("--config", type=Path, required=True)
     ap.add_argument("--rate-threshold", type=int, default=20)
     ap.add_argument("--rate-window-hours", type=float, default=24.0)
+    ap.add_argument("--select", choices=("largest", "first", "latest"), default="largest")
+    ap.add_argument("--list-all", action="store_true",
+                    help="Print every episode sorted by n_detections instead of picking one.")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
     tremor = load_pnsn_tremor(args.tremor)
+
+    if args.list_all:
+        from tremorferometry.episode import list_episodes
+        eps = list_episodes(
+            tremor,
+            rate_window_hours=args.rate_window_hours,
+            rate_threshold=args.rate_threshold,
+        )
+        print(f"found {len(eps)} episodes:")
+        for i, ep in enumerate(eps):
+            print(f"  [{i:2d}] {ep.t_start.date()} -> {ep.t_end.date()}  "
+                  f"n={ep.n_detections:5d}  "
+                  f"bbox=lat[{ep.bbox[0]:.2f},{ep.bbox[1]:.2f}] lon[{ep.bbox[2]:.2f},{ep.bbox[3]:.2f}]")
+        return
+
     ep = detect_episode(
         tremor,
         rate_window_hours=args.rate_window_hours,
         rate_threshold=args.rate_threshold,
+        select=args.select,
     )
     print(f"event_id: {cfg.event_id}")
     print(f"episode.t_start: {ep.t_start.isoformat()}")
