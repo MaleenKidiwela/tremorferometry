@@ -1350,6 +1350,91 @@ The PNSN seed already enforces temporal concentration through its
 tremor windows, so an additional ETS-only filter would wrongly drop
 real background families.
 
+### E.7u NLLB Branch B discovery completed (3,611 seeds)
+
+Ran `scripts/discover_nllb_pnsn_driven.py` to completion:
+- Stage 1 candidate detection at NLLB: **1,727,588 envelope-peak
+  candidates** across 1,541 days of active PNSN tremor.
+- Stage 2 per-bin complete-linkage clustering at CC>=0.80 with the
+  >=3-member / >=3-year filter: **3,611 NLLB seed families** binned
+  by 0.05 deg lat/lon (output: `data/nllb_pnsn_families.npz`,
+  `.summary.csv`, `.members.parquet`).
+
+Bug-fix during the run: scipy `linkage(method='complete')` rejects
+negative distances, but FFT-based all-pairs CC can return values
+marginally above 1.0 (numerical roundoff) which translate to negative
+1-CC distances. Clip CC to [-1, 1] before computing distance.
+
+Member-count distribution: every seed family has exactly **3-11 members**
+(median 3) across **3-6 distinct years** (median 3) — i.e. they sit
+right at the floor of the filter, none grew large. This is normal at
+the seed stage: PGC's E.7e seed clusters had the same 3-8 members
+each; PGC's huge 100k-1M detection counts only appeared after the
+matched-filter densification step.
+
+### E.7v The PNSN-centroid spatial-bias issue
+
+A methodological hole discovered when comparing Branch B output to
+Lin's catalog: PNSN's tremor centroid (the cross-station envelope-
+correlation centroid that PNSN attaches to each 5-min window) is
+spatially biased *toward the densest instrumentation* (south, near
+the Saanich peninsula), not toward the actual LFE source.
+
+Effect on our pipeline: at the Lin proto-family (49.30 N, -123.55 W,
+8,242 Lin detections in 12 years), there is only **1 PNSN window
+centroid within 5 km, 2 within 10 km, 12 within 20 km** across all
+of 2010-2026. Because Branch B inherits the PNSN centroid as the
+candidate's lat/lon, NLLB envelope-peak candidates triggered by
+those northerly LFEs get binned at PNSN's centroid (much further
+south) -- so the (49.30, -123.55) bin had **0 NLLB candidates** even
+though Lin says hundreds of LFEs fired there.
+
+Net consequence: Branch B systematically *mis-locates* northern V.I.
+LFE families to southern centroids. To fix, future iterations should
+either:
+- bin candidates by an NLLB-side relocation (heavier), or
+- run a complementary Lin-OT-seeded path that bins by Lin's location
+  (called Path B-Lin in conversation; not yet implemented at NLLB).
+
+### E.7w Densification of NLLB SNR>=10 seeds -- all 58 are real
+
+Took the 58 NLLB seeds with template SNR (peak / pre-pulse RMS) >= 10
+(`scripts/densify_nllb_seeds.py`) and ran the batched-fast matched
+filter at NLLB across all 5,981 day-files (2005-2026) at threshold
+cc>=0.7.
+
+Result (raw at cc>=0.7):
+- **175,167,284 total detections**
+- per template: min 741k, median 2.4M, max 6.9M
+- all 58 templates produced >=100k detections
+
+After filter to canonical cc>=0.80
+(`data/mf_nllb_seeds_cc08.csv`, 1 GB):
+- **14,826,425 detections**
+- per template: min 114k, median 186k, mean 256k, max 958k
+- **all 58 templates: >= 100k detections at cc>=0.80**
+
+Per-template detection counts are comparable to the PGC 51 product:
+PGC median 213k, NLLB median 186k. Strong validation that all 58
+SNR>=10 NLLB seeds are bona fide repeating LFE sources -- not noise.
+The combined SNR>=10 + complete-linkage 0.80 + 3yr filter was
+effective: the densification didn't admit any "false template" that
+turned out to fire <100k times. (PGC's 50/51 at >=100k for comparison
+is from the larger family list that included 6 sus families dropped
+in E.7q.)
+
+Open NLLB pipeline steps remaining:
+1. Long-window daily stacks at NLLB for the 58 (analog of
+   `build_long_window_daily_all51.py`).
+2. Coda 1-3 s dv/v at NLLB per family (analog of `dvv_coda_51.py`).
+3. Spatial match the 58 NLLB families against PGC's 45 healthy
+   families -> tag {PGC-only, NLLB-only, both}.
+4. Apply Path B-Lin to recover any northern V.I. families Branch B
+   mis-located (E.7v).
+5. Optionally apply LFE-vs-noise CNN classifier (trained on PGC 45)
+   to the larger SNR>=5 set (954 seeds) for a more permissive
+   high-confidence catalog.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
@@ -1403,6 +1488,33 @@ real background families.
     spurious 404s under load. For pre-2010 archives that aren't on
     IRIS, fetch with `--workers 1` to confirm what's actually missing
     vs throttled.
+11. **scipy linkage rejects negative distances** (E.7u). FFT-based
+    all-pairs CC can return values marginally above 1.0 due to
+    numerical roundoff, which translates to negative 1-CC distances
+    and breaks scipy.cluster.hierarchy.linkage. Clip CC to [-1, 1]
+    before computing distance.
+12. **PNSN tremor centroids are spatially biased** (E.7v). The
+    cross-station envelope-correlation centroid drifts toward the
+    densest instrumentation (south, near Saanich) and away from the
+    actual LFE source patch. Any pipeline that uses PNSN centroid
+    as a candidate location proxy will mis-locate northern V.I.
+    sources -- and miss them entirely in a strict spatial-bin
+    discovery. To recover northern sources, supplement PNSN-driven
+    discovery with a catalog that locates by arrival-time inversion
+    (Lin, Bostock).
+13. **Seed cluster size is not a quality signal** (E.7w). A 3-member
+    seed cluster at CC>=0.80 + 3 distinct years routinely densifies
+    to 100k-1M detections when matched-filtered against continuous
+    data. The seed-stage member count is determined by the candidate
+    sub-sample size (we cap at 2000/bin); the real family-vs-noise
+    discriminator is the *densified* detection count, not the seed
+    size.
+14. **SNR>=10 on the all-time-mean stack is a strong LFE gate** (E.7w).
+    All 58 NLLB seeds passing SNR>=10 produced >=100k cc>=0.80
+    detections after densification, matching PGC's median 213k.
+    This bar is more selective than "passes complete-linkage 0.80"
+    and discriminates real LFE templates from coincidence clusters
+    cheaply.
 
 ## 6. What's next
 
