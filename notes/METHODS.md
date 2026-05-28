@@ -1212,6 +1212,172 @@ tight null bound. Highest-value follow-ups:
 
 ---
 
+## 8. Multi-station extension and margin-wide plan
+
+The PGC-only product (Sections E.7l–o) measures dv/v on N=51 paths
+{ source patch → PGC } across 21 years. Extending this is two related
+problems:
+
+A. **Second station near the same sources** (e.g., NLLB) → confirms each
+   PGC family with a fully independent receiver and adds a second path
+   per family. Required for cross-validation of the ETS-time signal and
+   for any tomographic combination of paths.
+B. **Margin-wide extension** (Olympic Peninsula, central Oregon,
+   N California) → discovers new LFE families in regions Lin's catalog
+   does not cover.
+
+Both reuse the same discovery building blocks; the only thing that
+varies region-to-region is which **seed catalog** is available.
+
+### 8.1 Unified discovery recipe
+
+Seed selection by region:
+
+| Region | Lin (2023) | PNSN tremor catalog | Local broadband |
+|--------|-----------|---------------------|-----------------|
+| S. V.I. 2005–2017 | yes | yes | yes |
+| S. V.I. 2017–2026 | no  | yes | yes |
+| Olympic Peninsula | no  | yes | yes |
+| SW Washington / N Cascades | no | yes | yes |
+| Central Oregon | no | yes | yes |
+| N California | partial (Plourde 2015, Ducellier 2022) | yes | yes |
+
+Regardless of where Lin is available, the pipeline is the same five-step
+chain; we just feed it whatever seed exists for that region.
+
+**Step 1 — Seed candidate detection times.**
+- If Lin is available for this region: take Lin's detections in the
+  region's bounding box as candidates (`src/tremorferometry/lin_catalog.py`).
+- Otherwise: PNSN tremor windows (`pnsn.py` / `00b_fetch_pnsn_tremor.py`)
+  → envelope-peak detection at one or two local broadband stations
+  within each window
+  (`src/tremorferometry/detect.py::envelope_peaks_in_windows`,
+  SNR≥3 default, min separation 6 s).
+
+**Step 2 — Cut envelope-aligned 2-second windows.**
+At every regional station, cut a 2-s window centered on the Hilbert
+envelope peak in the expected direct-S arrival window for that
+station–source geometry. Bandpass 2–8 Hz, L2-normalize.
+(`repeater.py::cut_aligned_window`,
+ `repeater.py::cut_all_detections`.)
+
+**Step 3 — Shelly-Beroza network autocorrelation.**
+Compute all-pairs max-shifted CC at each regional station; average across
+stations (only pairs where both detections have valid data at that
+station). This is the Brown-Beroza-Shelly 2008 + Bostock 2012/2015
+recipe. (`repeater.py::all_pairs_cc_max_shifted`,
+`network_cc_all_pairs`, +/- 20-sample shift tolerance.)
+
+**Step 4 — Cluster into families.**
+Transitive-closure clustering on the (network CC ≥ τ) graph. We
+typically use τ = 0.70 for discovery and τ = 0.80 for the "strict"
+restrict-to-clean-paths variant. Require ≥3 members across ≥3 years
+(cross-year repeater filter) — this is what makes the family usable for
+multi-decadal dv/v rather than a one-off cluster.
+(`repeater.py::cluster_matches`.)
+
+**Step 5 — Densify with matched filter (and optionally PNSN growth).**
+Build each family's per-station template (stack of its member
+waveforms, L2-normed). Run the batched-fast matched filter
+(`matched_filter_fast.py`) at every regional station across all
+continuous days to recover detections the seed missed. Optionally feed
+the matched-filter output back as a new candidate set and rerun
+clustering once to capture sub-family structure or near-relatives
+(this is the "PNSN-grown" path that yielded the 16 strict at PGC).
+
+Output per region:
+- `families_<region>.csv` (cluster id, lat, lon, n_members, year span)
+- `templates_<region>.npz` (per-(family, station) 2-s waveform)
+- `mf_<region>_<station>.csv` (matched-filter detection time series)
+
+### 8.2 NLLB-specific pipeline (Lin available)
+
+Concrete recipe for the V.I. second-station step:
+
+1. **Backfill NLLB waveforms** 2005-2026 with
+   `scripts/backfill_pgc_2005-2013.py` (refactored to accept a
+   `--station` argument). IRIS for 2010+, NRCAN for earlier.
+   We already have 161 ETS-summer days; need ~5800 more.
+2. **Seed**: Lin detections in the V.I. bounding box (same set we used
+   for the 35 PGC originals — Lin's catalog is location-tagged, not
+   station-tagged, so the same detection-times feed every station).
+3. **Step 2** of §8.1 at PGC + NLLB jointly: cut envelope-aligned
+   2-s windows at each station around each Lin detection. The
+   envelope-peak search window at NLLB is offset from PGC by
+   (NLLB_travel_time − PGC_travel_time); calibrate empirically using
+   ~100 high-CC Lin detections per family from the PGC product.
+4. **Step 3** at PGC + NLLB: network CC across both stations.
+5. **Step 4**: cluster at τ=0.70 with cross-year filter. Expected
+   result: a re-discovery of most of the PGC 35 (those visible at
+   NLLB) plus possibly some NLLB-strong families PGC missed.
+6. **Spatially match NLLB-discovered families to PGC families**: same
+   cluster centroid within ~5 km ⇒ same physical source patch.
+   Tag PGC-only, NLLB-only, and both.
+7. **Step 5 — densify**: matched filter at NLLB with the new NLLB
+   templates → NLLB detection time series for each family.
+8. **PGC-pipeline parallel at NLLB**: build long-window daily stacks
+   (`build_long_window_daily_all51.py` parameterized on station) and
+   compute coda 1-3 s dv/v (`dvv_coda_51.py`).
+
+Comparison product: per family, two dv/v series (PGC path, NLLB path).
+Real ETS-time medium changes appear at both; source-pulse contamination
+or station-specific noise does not.
+
+### 8.3 Margin-wide extension (no Lin)
+
+For each new region (Olympic, central OR, N CA, ...), pick a regional
+sub-network of broadband stations within ~100 km of the target tremor
+patches. Network CC needs stations within that range — adding faraway
+stations (e.g., PGC) to an Olympic-region network is counterproductive
+because the LFE amplitude is below noise.
+
+Suggested regional sub-networks:
+
+| Region | Sub-network |
+|--------|-------------|
+| S. V.I. | PGC, LZB (pre-2014), NLLB, SNB |
+| Olympic Peninsula | UW.OSD, UW.SQM, UW.JCW, UW.HOOD |
+| SW Washington / N Cascades | UW.GMW, UW.LRIV, UW.PASS, UW.OHW |
+| Central Oregon | CC + UO stations near Three Sisters / Mt Jefferson |
+| N California | BK.WDC, BK.HUMO, BK.HUMP |
+
+Recipe per region:
+1. Backfill 2005–2026 waveforms for the regional sub-network (FDSN
+   IRIS+NRCAN+NCEDC depending on operator).
+2. Skip "seed = Lin"; go directly to PNSN-driven envelope-peak detection
+   at one or two seed stations in the sub-network (the
+   highest-SNR ones).
+3. Step 2 of §8.1 across the sub-network.
+4. Step 3 across the sub-network.
+5. Step 4 with τ=0.70, cross-year filter.
+6. Step 5 — densify and (optionally) re-seed PNSN with the new
+   templates to catch near-relatives.
+
+Output stitching: the **margin-wide LFE catalog** is the union of
+per-region families. dv/v is measured **per (family, station) within a
+region**, not across regions — there's no station with SNR for sources
+across the whole margin, so no global dv/v measurement. The final
+deliverable is a margin-wide dv/v map composed of regional per-path
+measurements.
+
+### 8.4 Open methodological choices for §8
+
+- **Spatial-match tolerance** between PGC-family and NLLB-family
+  centroids (currently a guess of ~5 km). Calibrate against Lin's
+  per-detection scatter for a known patch.
+- **Envelope-peak-search window offset between stations**. Either
+  pick from a 1-D V.I. velocity model (Bostock/Cassidy) or learn
+  empirically from initial high-CC matches.
+- **Minimum visibility threshold** before declaring a PGC family
+  "not seen at NLLB" — a family with weak NLLB SNR may still be
+  there but below CC≥0.7.
+- **Sub-network composition** when stations come online/offline
+  mid-record (e.g., LZB cuts off 2014-06). One option is to allow
+  variable sub-networks per epoch; another is to fix the sub-network
+  per region for the full 21 years and lose the LZB benefit pre-2014.
+
+---
+
 ## 7. Reproducibility
 
 Environment:
