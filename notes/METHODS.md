@@ -1269,12 +1269,18 @@ recipe. (`repeater.py::all_pairs_cc_max_shifted`,
 `network_cc_all_pairs`, +/- 20-sample shift tolerance.)
 
 **Step 4 — Cluster into families.**
-Transitive-closure clustering on the (network CC ≥ τ) graph. We
-typically use τ = 0.70 for discovery and τ = 0.80 for the "strict"
-restrict-to-clean-paths variant. Require ≥3 members across ≥3 years
+Complete-linkage clustering on the (network CC ≥ 0.80) graph (i.e.
+every member-pair within a family must have CC ≥ 0.80, not just be
+transitively connected). Require ≥3 members across ≥3 years
 (cross-year repeater filter) — this is what makes the family usable for
 multi-decadal dv/v rather than a one-off cluster.
-(`repeater.py::cluster_matches`.)
+(`repeater.py::cluster_matches` with complete-linkage threshold.)
+
+Note: the original E.7e discovery used τ=0.70 with transitive closure;
+that found 16 cross-year families but is now superseded. The canonical
+discovery threshold for this project is **0.80 with complete linkage**
+(matches the criterion used for the 16 strict new families at PGC and
+for the cc≥0.8 filter on every downstream matched-filter detection).
 
 **Step 5 — Densify with matched filter (and optionally PNSN growth).**
 Build each family's per-station template (stack of its member
@@ -1307,9 +1313,10 @@ Concrete recipe for the V.I. second-station step:
    (NLLB_travel_time − PGC_travel_time); calibrate empirically using
    ~100 high-CC Lin detections per family from the PGC product.
 4. **Step 3** at PGC + NLLB: network CC across both stations.
-5. **Step 4**: cluster at τ=0.70 with cross-year filter. Expected
-   result: a re-discovery of most of the PGC 35 (those visible at
-   NLLB) plus possibly some NLLB-strong families PGC missed.
+5. **Step 4**: complete-linkage cluster at 0.80 with the cross-year
+   filter. Expected result: a re-discovery of most of the PGC 35
+   (those visible at NLLB) plus possibly some NLLB-strong families
+   PGC missed.
 6. **Spatially match NLLB-discovered families to PGC families**: same
    cluster centroid within ~5 km ⇒ same physical source patch.
    Tag PGC-only, NLLB-only, and both.
@@ -1349,7 +1356,7 @@ Recipe per region:
    highest-SNR ones).
 3. Step 2 of §8.1 across the sub-network.
 4. Step 3 across the sub-network.
-5. Step 4 with τ=0.70, cross-year filter.
+5. Step 4 with complete-linkage 0.80, cross-year filter.
 6. Step 5 — densify and (optionally) re-seed PNSN with the new
    templates to catch near-relatives.
 
@@ -1370,7 +1377,9 @@ measurements.
   empirically from initial high-CC matches.
 - **Minimum visibility threshold** before declaring a PGC family
   "not seen at NLLB" — a family with weak NLLB SNR may still be
-  there but below CC≥0.7.
+  there but below the network CC ≥ 0.80 discovery threshold (or
+  may pass discovery but fail the per-detection CC ≥ 0.80 filter
+  used downstream).
 - **Sub-network composition** when stations come online/offline
   mid-record (e.g., LZB cuts off 2014-06). One option is to allow
   variable sub-networks per epoch; another is to fix the sub-network
