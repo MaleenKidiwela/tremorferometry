@@ -1149,6 +1149,207 @@ Figures:
 - `figures/smoke_dvv_direct_orig35.png`: same single-panel layout but
   on the 0–2 s direct-S product, for the side-by-side comparison.
 
+### E.7p PGC backfill 2005-2013 -- continuous record
+
+The canonical PGC product through E.7o was dense 2014+ but ETS-summer-only
+pre-2014 (~150 day-files/yr for 2010-2013 and ~0 for 2005-2009). To
+make the dv/v product continuous back to 2005:
+
+1. Fetched IRIS 2010-2014 at 24 workers (the dense, easy years) ->
+   ~1,400 new day-files, filling 2010-2013 to 95-100% per year.
+2. Fetched NRCAN 2005-2010 at 1 worker (parallel calls return spurious
+   404s under load; single-worker confirms the rest are genuine archive
+   gaps) -> ~330 new day-files, ~17% coverage per year 2005-2009.
+3. Re-ran the matched filter on the 1,460 new day-files only
+   (`scripts/scan_new_days_all51.py`, diff disk-days vs existing MF
+   catalog) -> +5.3 M cc>=0.8 detections, combined 15.76 M total.
+4. Rebuilt long-window daily stacks -> 164,229 (template, day) rows
+   (+31% over pre-backfill). Recomputed coda 1-3 s dv/v with the
+   all-time-mean LFE reference per family.
+
+Bug-fix in `scan_new_days_all51.py`: `patch_templates.npz` contains
+BOTH PGC_* and LZB_* templates (35 each, for the original two-station
+discovery in E.7e). The first run loaded ALL of them, scanning the new
+PGC waveforms with LZB templates too -- producing ~1.6 M spurious
+"detections" that contaminated the combined CSV. Script now whitelists
+templates whose name starts with the target station prefix.
+
+Final canonical product (`data/daily_dvv_51_coda_1to3.csv`):
+
+| field | value |
+|---|---|
+| measurements | 162,791 daily dv/v values (+32% over E.7o) |
+| date range | continuous 2005-2026 |
+| 2010-2026 coverage | 94-100% per year |
+| 2005-2009 coverage | ~17% per year (NRCAN archive limit) |
+| patches | 49 of 51 attempted (PGC_66, PGC_104 drop out at cc>=0.80 stretch) |
+| mean stretching CC | 0.977 |
+| per-day dv/v median | -0.001%, 5-95%ile -0.088 / +0.079% |
+
+Figures: `smoke_dvv_51_coda_1to3.png` (single-panel cross-patch median),
+`smoke_long_window_image_PGC_79.png` (record section).
+
+### E.7q Audit of the 51 -- 6 suspect families on stack SNR
+
+Quick auditing the 51 families by the all-time-mean LFE stack's
+direct-pulse SNR (peak amplitude in [0, 2 s] / RMS in [-3, -0.5] s)
+identifies a cliff:
+
+- **45 healthy families**: SNR > 1, most > 5. Highest is STRICT_599 at
+  SNR=143. These show a clear direct-S pulse above pre-pulse noise in
+  the all-time stack.
+- **6 suspect families**: SNR < 1 in all six. The all-time stack has
+  no visible direct-S pulse above background.
+
+The 6 suspects (`PGC_22, PGC_48, PGC_66, PGC_104, PGC_114, PGC_116`)
+share a tight signature:
+- 64-82 daily stacks (vs 1000-5000 for healthy)
+- 12-14 distinct years (vs ~21 for healthy)
+- ~42,000 matched-filter detections each (the MF still "finds" them
+  because the template shape is what's being matched, but those are
+  largely false-positive detections on noise)
+- 0-3 daily stacks pass the cc>=0.80 coda stretch filter (vs 200-5900
+  for healthy)
+
+Interpretation: these templates were derived from Lin's 0.05-deg
+clustered detections at lat/lon bins that don't actually contain a
+single coherent repeating source. The template ends up being mostly
+band-limited noise that the matched filter then "finds" everywhere.
+
+Net effect on dv/v: collectively contribute <=6 day-measurements out
+of 162,791, so they don't pollute the cross-patch median, but they
+should be dropped from any "family list" deliverable. Effective real
+family count is **45**, not 51. (Note: this is consistent with the
+canonical 49 in the dv/v CSV minus the 4 sus families that contribute
+1-3 measurements each.)
+
+To filter later, the rule is straightforward: require `template SNR
+>= 1.0` (a generous bar) on the all-time-mean stack at PGC.
+
+### E.7r NLLB pipeline -- waveform backfill (multi-station extension)
+
+First step of the §8.2 NLLB workflow: bring NLLB waveforms to parity
+with PGC across 2005-2026.
+
+Final NLLB coverage (5,979 day-files, 41 GB):
+
+| Year | files | coverage | notes |
+|---|---|---|---|
+| 2005-2009 | ~40-67 each | ~10-18% | NRCAN archive limit (similar to PGC) |
+| 2010-2018 | 346-366 | 94-100% | IRIS |
+| 2019 | 310 | 84% | Persistent IRIS gap at the HHZ-channel transition |
+| 2020-2025 | 346-366 | 94-100% | IRIS |
+| 2026 | 66 | year-to-date | IRIS |
+
+NLLB channel timeline: BHZ 40 Hz 2003-2017, HHZ 100 Hz 2017-open. The
+HHZ transition introduces sub-sample FS jitter (99.999... vs 100.0)
+that broke `repeater.py::_load_day_filt::st.merge`. Fixed there the
+same way `matched_filter_fast.py::_load_day_filt` was fixed earlier
+(resample each trace before merging).
+
+**Process artifact discovered**: large multi-year IRIS fetch jobs
+sometimes exit silently mid-run with `wrote 0` and no error -- the
+process gets killed by the harness (or IRIS connection state goes
+bad) and the bottom of the script's print loop never runs. Mitigation:
+do FDSN backfill in **year-by-year subprocess invocations**, each
+short enough to complete within the harness window. For years that
+still don't fill (HHZ-100Hz era at high concurrency), drop to monthly
+chunks and run multiple passes. The `fetch_day` function in
+`waveforms.py` skips on-disk files, so passes are idempotent.
+
+Distance check: PGC's 51 families sit 10-85 km from PGC; the same
+families are 10-110 km from NLLB. NLLB additionally covers tremor
+sources up to ~50 km north of itself (49.5-50 N) that PGC cannot see
+at all. Defensible PNSN bbox for NLLB-side discovery is ~80-100 km
+around NLLB, i.e., **48.5-50.0 N, -124.7 to -123.0 W**, though we
+fetched 47.5-51.5 N to verify the geophysical taper.
+
+### E.7s PNSN catalog extended to 47.5-51.5 N
+
+The original cached PNSN catalog (`catalogs/pnsn_tremor_2014-2026.csv`)
+had been fetched with the V.I.-only bbox 47.5-50.0 N. Re-fetched
+2010-01..2027-01 over 47.5-51.5 N x -125.5 to -122.0 W
+(`catalogs/pnsn_tremor_2010-2026_extn.csv`):
+
+| Lat band | events | notes |
+|---|---|---|
+| 47-48 N | 41,790 | Olympic Peninsula |
+| 48-49 N | 129,425 | S. V.I., Strait of Juan de Fuca |
+| 49-50 N | 41,767 | S. V.I. interior |
+| **50-51 N** | **24** | Cascadia tremor taper (geophysical limit) |
+| 51-52 N | 0 | (geophysical) |
+
+213,006 total events (+25% over original cache, mostly from time-gap
+infill, but also confirming the north-of-50 region is essentially
+inactive). For southward / margin-wide extensions later, PNSN extends
+all the way to ~40 N (Mendocino Triple Junction), with a real activity
+gap 46-47 N between WA and OR tremor zones.
+
+### E.7t NLLB family discovery -- methodology consolidation
+
+The pipeline for any new station (locked in conversation):
+
+**Branch A (Lin-seeded, multi-station)**
+- Cut envelope-aligned 2-s windows at PGC + NLLB around every Lin OT.
+- Network CC = mean of all-pairs PGC-CC and all-pairs NLLB-CC.
+- Cluster + cross-year filter.
+- Threshold question: single-station 0.80 doesn't transfer cleanly
+  to two-station mean (largest V.I. proto-family at PGC max single-CC
+  ~0.83 but network mean max ~0.76). Options on the table:
+  (i) network mean >= 0.80 (very strict, near-zero yield),
+  (ii) per-station >= 0.80 both (strict but equivalent to single-
+       station bar applied symmetrically),
+  (iii) network mean >= 0.70 (matches the original E.7e finding of
+        16 cross-year families at PGC + LZB).
+  Parked while we ran Branch B (which uses single-station 0.80
+  unambiguously).
+
+**Branch B (PNSN-driven, single-station)**
+- Every PNSN tremor window in the bbox -> envelope-peak detection at
+  NLLB -> candidate list with inherited tremor lat/lon.
+- Bin by 0.05 deg lat/lon -> per-bin all-pairs CC at NLLB ->
+  **complete-linkage cluster at single-station CC >= 0.80** -> keep
+  clusters with >=3 members across >=3 years.
+- This is the exact analog of the procedure that yielded the 16
+  STRICT new families at PGC, applied at NLLB.
+
+`scripts/discover_nllb_pnsn_driven.py`. Stage 1 (candidate detection)
+produces 1.73 M NLLB envelope peaks across 1,541 days of active PNSN
+tremor. Stage 2 (per-bin clustering) is running at the time of this
+note.
+
+**Network autocorrelation as TAG, not filter** (key methodological
+clarification): hard-applying "must be coherent at both PGC and NLLB"
+to Branch B would discard the most interesting class of finds --
+sources visible at NLLB but not PGC (e.g., north of NLLB, outside
+PGC's reach). Instead, run network CC as a per-family **tag** after
+Branch B discovery:
+- `two-station-validated`: NLLB family with a coherent PGC stack
+  cut at the same source times. Best for cross-station dv/v +
+  spatial inversion.
+- `NLLB-only-strong`: PGC stack incoherent but NLLB stack has high
+  SNR + tight pairwise CC distribution + smooth coda decay. Real
+  family that PGC can't see. Single-station NLLB dv/v only.
+- `weak/noise`: low NLLB SNR, marginal pair CC, no coda decay.
+  Discard.
+
+LFE-vs-noise discriminators applicable post-discovery (in order of
+cost-effectiveness):
+1. **Tight pairwise CC distribution** (median pair-CC well above the
+   0.80 threshold, not just barely passing).
+2. **Stack impulsiveness** -- direct-pulse peak / pre-pulse RMS >= 3-5.
+3. **Spectral peak in 2-6 Hz** vs flat/lined/microseism-dominated.
+4. **Coda decay structure** -- smooth exponential tail vs featureless flat.
+5. **Time-of-day uniformity** -- catches cultural / anthropogenic noise.
+6. **PGC cross-check tag** (above).
+7. **3-component polarization** -- requires fetching N/E channels.
+
+Notably absent from the list: "ETS-concentration" -- LFEs occur
+outside ETSs too (background / inter-ETS LFEs, sub-ETS slip events).
+The PNSN seed already enforces temporal concentration through its
+tremor windows, so an additional ETS-only filter would wrongly drop
+real background families.
+
 ### E.8 Lessons
 
 1. **Always build the reference from signal-rich data.** A noisy reference
@@ -1175,6 +1376,33 @@ Figures:
    Always either place rows at their true calendar index with NaN gaps,
    or use pcolormesh with explicit y-coords, before reading coverage off
    the plot.
+6. **The 0.80 STRICT threshold is single-station, not network** (E.7t).
+   Applying single-station CC>=0.80 to a two-station mean is
+   inconsistent: the network mean is bounded above by the lower of the
+   two per-station CCs, so requiring mean>=0.80 effectively requires
+   both stations to individually exceed 0.80, which is much stricter
+   than the per-station bar. Pick a consistent definition (e.g.
+   per-station 0.80 at all stations) before threshold-tuning.
+7. **Network autocorrelation is a tag, not a hard filter** (E.7t).
+   Requiring coherence at all stations discards the most scientifically
+   interesting class of finds -- single-station-visible sources at the
+   new station. Use cross-station check to tag families, not to
+   exclude them. The original PGC STRICT 16 were found single-station
+   without LZB validation.
+8. **patch_templates.npz holds templates for BOTH PGC and LZB**
+   (E.7p). Any matched-filter wrapper that loads it indiscriminately
+   will scan a single-station's waveforms with the wrong-station
+   templates and produce contaminated detections. Whitelist by
+   station prefix.
+9. **FDSN backfill: do year-by-year subprocess calls, not one big run**
+   (E.7r). Multi-year IRIS pulls sometimes exit silently mid-run
+   (process killed, partial save, no error). Smaller per-process work
+   units + idempotent skip-on-disk is much more reliable. Drop to
+   monthly chunks for problem years (especially HHZ 100 Hz era).
+10. **NRCAN single-worker FDSN** (E.7r, E.7p). Parallel calls return
+    spurious 404s under load. For pre-2010 archives that aren't on
+    IRIS, fetch with `--workers 1` to confirm what's actually missing
+    vs throttled.
 
 ## 6. What's next
 
