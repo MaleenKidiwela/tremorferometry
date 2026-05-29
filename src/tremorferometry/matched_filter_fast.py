@@ -116,6 +116,15 @@ def scan_day_multi(
         # numerator
         num = fftconvolve(data, t0[::-1], mode="valid")
         cc = (num / win_std).astype(np.float32)
+        # Reject degenerate windows. A normalized (Pearson) CC satisfies
+        # |cc| <= 1 by Cauchy-Schwarz; any |cc| > 1 is a numerical artifact
+        # from a near-flat window (e.g. a zero-filled data gap), where the
+        # true win_std ~ 0 was clamped to the 1e-12 floor while the numerator
+        # was not exactly zero. These flooded gappy stations (GNW 1995-2026:
+        # 99.9% of cc>=0.8 "detections" were cc>1 artifacts). Set them to 0 so
+        # they never pass the threshold.
+        cc[~np.isfinite(cc)] = 0.0
+        cc[np.abs(cc) > 1.0] = 0.0
         # peak-pick
         picks = []
         i = 0
@@ -155,26 +164,115 @@ def scan_many_days_multi(
     min_gap_s: float = 6.0,
     n_workers: int = 24,
     progress_every: int = 50,
-) -> pd.DataFrame:
-    """Parallel: load each day once, run all templates."""
+    out_path: "Path | str | None" = None,
+    flush_every: int = 50,
+    qc_median_count_max: "int | None" = None,
+    qc_median_cc_max: "float | None" = None,
+):
+    """Parallel: load each day once, run all templates.
+
+    Two modes:
+      * out_path is None (default): accumulate all detections in memory and
+        return a DataFrame. Fine for small scans; can OOM on large ones.
+      * out_path given: STREAM detections to that CSV as each day's future
+        completes, flushing every `flush_every` days and dropping them from
+        RAM. Peak memory stays flat (~one batch of days) regardless of total
+        detection count. Returns a per-template detection-count dict (small),
+        not the full DataFrame.
+
+    Submission is BOUNDED: at most `max_inflight` (= 2*n_workers) tasks are
+    submitted at once, and a new one is submitted only as each completes. This
+    caps how many completed-but-undrained worker results can buffer in RAM —
+    without it, submitting all days up front lets fast workers outrun the
+    single-threaded consumer and pile up results until OOM (seen on GNW
+    1995-2026, where noisy early years fire ~200K detections/day).
+    """
+    import multiprocessing as mp
+    from collections import Counter
     from concurrent.futures import ProcessPoolExecutor, as_completed
+
+    # Use "spawn" (fresh interpreter per worker) rather than the Linux default
+    # "fork". numpy/scipy/obspy start internal thread pools on import; forking
+    # while one of those threads holds a lock gives the child a locked mutex
+    # with no thread to release it -> the worker deadlocks on its first FFT
+    # (seen as workers stuck in futex_wait, 0% CPU). spawn avoids this.
+    mp_ctx = mp.get_context("spawn")
 
     rows = []
     done = 0
+    dropped = 0
     total = len(days)
+    tmpl_counts: "Counter[str]" = Counter()
+    header_written = False
+
+    def _is_bad_day(res):
+        """Per-day QC: artifact days saturate ALL templates near-equally with
+        near-perfect cc (e.g. GNW 1995 telemetry glitch: ~9,100 det/template,
+        median cc ~0.98). Real tremor has high MAX but moderate MEDIAN counts and
+        cc spread down to the threshold. Flag a day if its median per-template
+        count or its median cc is implausibly high."""
+        if qc_median_count_max is None and qc_median_cc_max is None:
+            return False, 0, 0.0
+        counts = [len(times) for times, _ in res.values()]
+        all_cc = [c for _, ccs in res.values() for c in ccs]
+        if not counts:
+            return False, 0, 0.0
+        med_count = int(np.median(counts))
+        med_cc = float(np.median(all_cc)) if all_cc else 0.0
+        bad = ((qc_median_count_max is not None and med_count > qc_median_count_max)
+               or (qc_median_cc_max is not None and med_cc > qc_median_cc_max))
+        return bad, med_count, med_cc
+
+    def _flush():
+        nonlocal rows, header_written
+        if not rows:
+            return
+        df = pd.DataFrame(rows)
+        df.to_csv(out_path, mode="a", header=not header_written, index=False)
+        header_written = True
+        rows = []
+
+    # Submit ALL tasks up front and drain with as_completed. This keeps the
+    # worker pool continuously saturated (workers never wait on the main thread
+    # to hand them the next day), which is what makes this fast. An earlier
+    # bounded-submission throttle was added to cap RAM, but that was only needed
+    # because the (now-fixed) cc>1 bug flooded memory with bogus detections;
+    # with the cc fix + per-day QC the detection volume is normal, the streaming
+    # flush below keeps `rows` bounded, so submit-all is safe again.
     args_list = [
         (waveform_root, station, d, templates, fs, bandpass, threshold, min_gap_s)
         for d in days
     ]
-    with ProcessPoolExecutor(max_workers=n_workers) as ex:
-        futs = {ex.submit(_worker_task, a): a[2] for a in args_list}
+    with ProcessPoolExecutor(max_workers=n_workers, mp_context=mp_ctx) as ex:
+        futs = [ex.submit(_worker_task, a) for a in args_list]
         for f in as_completed(futs):
             day, res = f.result()
+            if res is not None:
+                bad, med_count, med_cc = _is_bad_day(res)
+                if bad:
+                    dropped += 1
+                    print(f"[{station}] QC DROP {day.date()}: median "
+                          f"{med_count}/template, median cc {med_cc:.3f} "
+                          f"(artifact day)", flush=True)
+                    res = None
             if res is not None:
                 for tkey, (times, ccs) in res.items():
                     for t, cc in zip(times, ccs):
                         rows.append({"template": tkey, "time": t, "cc": cc, "station": station})
+                    if out_path is not None:
+                        tmpl_counts[tkey] += len(times)
             done += 1
+            if out_path is not None and done % flush_every == 0:
+                _flush()
             if done % progress_every == 0:
-                print(f"[{station}] day {done}/{total}: cumulative {len(rows)} detections", flush=True)
+                seen = (sum(tmpl_counts.values()) if out_path is not None else len(rows))
+                print(f"[{station}] day {done}/{total}: cumulative {seen} "
+                      f"detections ({dropped} days QC-dropped)", flush=True)
+
+    if qc_median_count_max is not None or qc_median_cc_max is not None:
+        print(f"[{station}] QC: dropped {dropped}/{done} days as artifact days",
+              flush=True)
+    if out_path is not None:
+        _flush()
+        return dict(tmpl_counts)
     return pd.DataFrame(rows)

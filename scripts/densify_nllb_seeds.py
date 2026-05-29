@@ -38,6 +38,17 @@ def parse_args():
     p.add_argument("--threshold", type=float, default=0.7)
     p.add_argument("--min-gap-s", type=float, default=6.0)
     p.add_argument("--workers", type=int, default=32)
+    p.add_argument("--qc-median-count", type=int, default=2000,
+                   help="Drop a day if its MEDIAN per-template detection count "
+                        "exceeds this (artifact days saturate all templates "
+                        "near-equally). 0 disables.")
+    p.add_argument("--qc-median-cc", type=float, default=0.96,
+                   help="Drop a day if its median detection cc exceeds this "
+                        "(near-perfect = repetitive artifact, not tremor). 0 disables.")
+    p.add_argument("--reverse", action="store_true",
+                   help="Scan newest day-file first (reverse-chronological). "
+                        "Useful to find where old data goes bad: clean recent "
+                        "years stream to the CSV first, so a mid-run stop keeps them.")
     p.add_argument("--out", default="data/mf_nllb_seeds_top.csv")
     return p.parse_args()
 
@@ -77,12 +88,28 @@ def main():
             except ValueError:
                 continue
             days.append(datetime(year, 1, 1) + timedelta(days=jday - 1))
-    print(f"  {len(days)} {args.station} day-files spanning "
-          f"{days[0].date()} - {days[-1].date()}")
+    days.sort()
+    span_lo, span_hi = days[0].date(), days[-1].date()
+    if args.reverse:
+        days.reverse()
+    print(f"  {len(days)} {args.station} day-files spanning {span_lo} - {span_hi}"
+          f"{' (scanning NEWEST first)' if args.reverse else ''}")
+
+    # Fresh start: drop any partial CSV from a prior crashed run so we don't
+    # append onto a half-written file.
+    out_p = Path(args.out)
+    if out_p.exists():
+        print(f"  removing existing {args.out} ({out_p.stat().st_size/1e9:.1f} GB) before fresh scan")
+        out_p.unlink()
 
     print(f"[3/3] Matched filter across all days "
-          f"(threshold={args.threshold}, workers={args.workers})...")
-    df = scan_many_days_multi(
+          f"(threshold={args.threshold}, workers={args.workers}); "
+          f"streaming to {args.out}...")
+    # Stream detections straight to disk as each day completes, so peak RAM
+    # stays flat regardless of how many years the station spans. (Accumulating
+    # all detections in memory + one final to_csv OOM-kills long-span stations
+    # like GNW 1995-2026; NLLB/PGC have shorter spans and squeaked under the cap.)
+    counts = scan_many_days_multi(
         waveform_root=Path(args.wfdir),
         station=args.station,
         days=days,
@@ -93,19 +120,24 @@ def main():
         min_gap_s=args.min_gap_s,
         n_workers=args.workers,
         progress_every=200,
+        out_path=args.out,
+        flush_every=50,
+        qc_median_count_max=(args.qc_median_count or None),
+        qc_median_cc_max=(args.qc_median_cc or None),
     )
-    print(f"  raw detections at cc>={args.threshold}: {len(df):,}")
-    df.to_csv(args.out, index=False)
+    total = sum(counts.values())
+    print(f"  raw detections at cc>={args.threshold}: {total:,}")
     print(f"  saved {args.out}")
 
-    # Per-template count summary
-    counts = df["template"].value_counts()
+    # Per-template count summary (from the streamed counts, no big DataFrame)
+    cvals = pd.Series(counts, dtype="int64")
     print()
     print(f"detections per template at cc>={args.threshold}:")
-    print(f"  min={int(counts.min())}, median={int(counts.median())}, "
-          f"max={int(counts.max())}, mean={int(counts.mean())}")
+    if len(cvals):
+        print(f"  min={int(cvals.min())}, median={int(cvals.median())}, "
+              f"max={int(cvals.max())}, mean={int(cvals.mean())}")
     for thr in [100, 1000, 10000, 100000]:
-        n = (counts >= thr).sum()
+        n = int((cvals >= thr).sum())
         print(f"  >= {thr:,} detections: {n} families")
 
 

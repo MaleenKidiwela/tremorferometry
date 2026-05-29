@@ -37,6 +37,7 @@ def parse_args():
     p.add_argument("--cc-min", type=float, default=0.80)
     p.add_argument("--eps-max", type=float, default=0.02)
     p.add_argument("--n-eps", type=int, default=401)
+    p.add_argument("--station", default="PGC")
     p.add_argument("--out-csv", default="data/daily_dvv_51_coda_1to3.csv")
     p.add_argument("--out-fig", default="figures/smoke_dvv_51_coda_vs_direct.png")
     p.add_argument("--compare-csv", default="data/daily_dvv_51_alltime_ref.csv")
@@ -131,7 +132,7 @@ def main():
     ax.xaxis.set_major_locator(mdates.YearLocator(2))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
     ax.set_title(
-        f"PGC dv/v on coda window {w_lo}-{w_hi} s, all-time-mean LFE reference  --  "
+        f"{args.station} dv/v on coda window {w_lo}-{w_hi} s, all-time-mean LFE reference  --  "
         f"{n_patches} patches, {len(df):,} measurements, mean cc {df['cc_max'].mean():.3f}"
     )
     ax.legend(loc="upper right", fontsize=9)
