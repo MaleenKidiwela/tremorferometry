@@ -73,6 +73,11 @@ def _process_day(args_tuple):
     st.detrend("demean")
     st.filter("bandpass", freqmin=cfg["fmin"], freqmax=cfg["fmax"], corners=4, zerophase=True)
     tr = st[0]; data = tr.data.astype(np.float64); start = tr.stats.starttime.datetime
+    _dm = cfg.get("despike_mad", 0.0)
+    if _dm and _dm > 0:
+        _med = np.median(data); _mad = np.median(np.abs(data - _med)) * 1.4826
+        if _mad > 0:
+            np.clip(data, _med - _dm*_mad, _med + _dm*_mad, out=data)
     pre_n, post_n = cfg["pre_n"], cfg["post_n"]; win_n = pre_n + post_n
     out = []
     for tmpl, times_us in by_tmpl.items():
@@ -112,6 +117,9 @@ def main():
                    help="skip response removal entirely (resample_poly only; OK for within-era dv/v)")
     p.add_argument("--start-year", type=int, default=0); p.add_argument("--end-year", type=int, default=9999)
     p.add_argument("--out", default="data/long_window_daily_GNW_resp.npz")
+    p.add_argument("--despike-mad", type=float, default=0.0,
+                   help="winsorize bandpassed samples beyond this many MAD/day (0=off; "
+                        "match the densify --despike-mad so detection and stacking agree)")
     args = p.parse_args()
 
     pre_n = int(round(args.pre*args.fs)); post_n = int(round(args.post*args.fs)); win_n = pre_n+post_n
@@ -130,7 +138,7 @@ def main():
     cfg = dict(wfdir=args.wfdir, network=args.network, station=args.station, inv_path=args.inv,
                fs=args.fs, fmin=args.fmin, fmax=args.fmax, pre_n=pre_n, post_n=post_n,
                min_det=args.min_det, pre_filt=[0.5,1.0,15.0,18.0], deconv_native=args.deconv_native,
-               no_deconv=args.no_deconv)
+               no_deconv=args.no_deconv, despike_mad=args.despike_mad)
     arg_iter = [(d, bydt[d], cfg) for d in days]
 
     print(f"[2/3] stacking (resp-removed, spawn, workers={args.workers})...", flush=True)
