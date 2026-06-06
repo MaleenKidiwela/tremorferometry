@@ -71,9 +71,55 @@ def parse_args():
     p.add_argument("--candidates-out", default="data/nllb_pnsn_candidates.parquet")
     p.add_argument("--use-cached-candidates", action="store_true",
                    help="Skip stage 1 if candidates parquet already exists")
+    p.add_argument("--candidates-only", action="store_true",
+                   help="Run stage 1 (candidate detection), save parquet, then exit "
+                        "(stage 2 clustering done separately by discover_gpu.py)")
     p.add_argument("--out", default="data/nllb_pnsn_families.npz")
     p.add_argument("--seed", type=int, default=0)
     return p.parse_args()
+
+
+def _load_day_poly(root, station, day, bandpass, fs):
+    """Like repeater._load_day_filt but resample_poly (low-memory, ~9x faster, no
+    obspy FFT-resample drift). Returns (data float32, start UTCDateTime) or None."""
+    from fractions import Fraction
+
+    from obspy import read
+    from scipy.signal import resample_poly
+
+    cands = list(Path(root).glob(
+        f"*.{station}/{day.year}/{day.timetuple().tm_yday:03d}.mseed"))
+    if not cands:
+        return None
+    try:
+        st = read(str(cands[0]))
+    except Exception:
+        return None
+    st = st.select(component="Z")
+    if len(st) == 0:
+        return None
+    for tr in st:
+        nat = float(tr.stats.sampling_rate)
+        if abs(nat - fs) > 1e-6:
+            fr = Fraction(int(round(fs)), int(round(nat))).limit_denominator(1000)
+            try:
+                tr.data = resample_poly(
+                    tr.data.astype(np.float64), fr.numerator, fr.denominator
+                ).astype(np.float32)
+                tr.stats.sampling_rate = fs
+            except Exception:
+                return None
+    try:
+        st.merge(fill_value=0)
+    except Exception:
+        return None
+    if len(st) == 0:
+        return None
+    st.detrend("demean")
+    st.filter("bandpass", freqmin=bandpass[0], freqmax=bandpass[1],
+              corners=4, zerophase=True)
+    tr = st[0]
+    return tr.data.astype(np.float32), tr.stats.starttime
 
 
 # Top-level worker for ProcessPool (must be pickleable).
@@ -90,7 +136,7 @@ def _candidates_one_day(args_tuple):
 
     day_str, windows_us, latlons, cfg = args_tuple
     day = datetime.fromisoformat(day_str)
-    loaded = _load_day_filt(
+    loaded = _load_day_poly(
         Path(cfg["wfdir"]), cfg["station"], day,
         (cfg["fmin"], cfg["fmax"]), cfg["fs"],
     )
@@ -281,11 +327,17 @@ def main():
                 if n_done % 200 == 0:
                     el = time.time() - t0
                     print(f"  day {n_done}/{len(tasks)}, "
-                          f"cumulative candidates: {len(candidates):,}  ({el:.0f}s)")
+                          f"cumulative candidates: {len(candidates):,}  ({el:.0f}s)",
+                          flush=True)
 
         cand_df = pd.DataFrame(candidates)
         cand_df.to_parquet(args.candidates_out, index=False)
         print(f"  saved {len(cand_df):,} candidates -> {args.candidates_out}")
+
+    if args.candidates_only:
+        print("[candidates-only] stage 1 done; exiting before stage 2 "
+              "(use discover_gpu.py for GPU clustering)")
+        return
 
     # Stage 2: cluster per spatial bin
     print(f"[3/3] Stage 2: complete-linkage clustering per "
@@ -336,7 +388,7 @@ def main():
                     families.append(c)
             if n_done % 20 == 0:
                 print(f"  bin {n_done}/{len(bin_tasks)}, "
-                      f"families so far: {len(families)}")
+                      f"families so far: {len(families)}", flush=True)
 
     print(f"\n[done] Discovered {len(families)} NLLB families at "
           f"CC>={args.cc_threshold} complete-linkage, "

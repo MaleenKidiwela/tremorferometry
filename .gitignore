@@ -28,3 +28,6 @@ catalogs/*.parquet
 .DS_Store
 .vscode/
 .idea/
+
+# transient pipeline run logs
+logs/
