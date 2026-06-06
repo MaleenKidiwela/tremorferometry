@@ -309,3 +309,43 @@ The whole chain is `scripts/run_gnw_pipeline.sh` (densify→concat→stack→dv/
 Working pin: numpy 1.26.4 (conda), scipy 1.14.0, cartopy 0.25.0, obspy 1.5.0 (~/.local).
 This session env was INTACT (conda not wiped). Work is done in a REPL — no `.ipynb` — so
 in-flight commands don't survive a crash; only on-disk artifacts + this note do.
+
+## HDW multi-station run — GPU discovery + station-centered box (this session)
+Goal: run the full pipeline on UW.HDW (Olympic Pen., 47.649, -123.053), coverage-select
+families, densify, dv/v. New tooling built + validated this session:
+
+- **GPU family discovery (the big win).** `scripts/discover_gpu.py` replaces the slow/OOM-y
+  CPU stage-2. Three speedups, all validated equivalent:
+  1. LOAD-EACH-DAY-ONCE (group candidate cuts by calendar day; ~11k loads not ~100k).
+  2. `resample_poly` not obspy FFT-resample (0.12 s vs 1.1 s/100Hz-day; far less RAM).
+  3. GPU all-pairs max-shifted CC (`src/tremorferometry/repeater_gpu.py`): 11.6 s → 0.06 s
+     per 2000-window bin, max|Δ|=1.8e-7 vs CPU, ZERO cluster-flips at cc≥0.8.
+  Single GPU process; CPU workers only cut waveforms (KB each) → no N²-per-worker blowup.
+  HDW stage-2: 29,721 families in **89 s at anon 2 G** (CPU run was ~100 min / 54 G / 50-cap).
+  **It writes the `snr` column** (template env-peak / pre-pulse-RMS, pre = T[:34]) that the
+  committed `discover_nllb_pnsn_driven.py` silently STOPPED writing — without it,
+  select_coverage_families.py / plot_family_map.py break at the next step.
+- **Stage-1 also fixed for memory.** `discover_nllb_pnsn_driven.py` now has `_load_day_poly`
+  (resample_poly) used by `_candidates_one_day`, + `--candidates-only` flag (run stage-1,
+  save parquet, exit; GPU does stage-2). 24-worker obspy stage-1 hit anon 99 G (near-OOM,
+  killed); resample_poly + 16 workers → anon **4 G**, 1543 days in ~95 s.
+- **PNSN catalog was DOWNLOAD-CUT at 47.5°N** (the `--bbox 47.5 ...` in 00b_fetch). HDW sits
+  ~16 km north of that false floor, so the south looked empty. The MASTER catalog already on
+  disk is `catalogs/pnsn_tremor_cascadia_full.csv` (748k rows, lat 39.5–50.9, 2010–2026) —
+  USE THIS, not the 47.5-cut `pnsn_tremor_2014-2026.csv`.
+- **Station-CENTERED box** (per user): center on the station, choose ±km. HDW used ±100 km
+  N/S+E/W → bbox `46.748 48.550 -124.390 -121.716`. 43% of within-60km tremor is SOUTH of HDW.
+  Plot the box first: `scripts/plot_station_box.py`.
+
+HDW pipeline state (DONE up to selection):
+  data/hdw_pnsn_candidates_100km.parquet (1.72M, 34% south)
+  data/hdw_pnsn_families_100km.npz/.summary.csv (29,721 fams; SNR≥10: 96, 23 south)
+  data/hdw_coverage_selection_100km.summary.csv (37 fams, 10/12 az, 4/4 rings, med SNR 19.8)
+  figures: smoke_hdw_family_map_100km.png, smoke_hdw_coverage_selection_100km.png
+NEXT: densify the 37 selected at HDW (GPU matched filter, full record) → stack → coda dv/v,
+same chain as GNW (densify_gnw_gpu.py is the template; point it at the 37-family templates).
+
+Generic multi-station recipe (for the 100s-of-stations goal):
+  1. download_hdw.py-style waveform pull.  2. discover_nllb_pnsn_driven.py --candidates-only
+  --pnsn cascadia_full --bbox <station-centered>.  3. discover_gpu.py (GPU stage-2 + snr).
+  4. select_coverage_families.py.  5. plot_family_map.py.  6. densify (GPU).  7. dv/v.

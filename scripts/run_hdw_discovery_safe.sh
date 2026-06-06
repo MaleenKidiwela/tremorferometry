@@ -6,13 +6,13 @@
 cd /home/jovyan/tremorferometry
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 L=logs/hdw_discovery2.log; : > "$L"
-echo "$(date '+%H:%M:%S') launching stage-2 (max-bin 700, workers 10, watchdog @150G)" >> "$L"
+echo "$(date '+%H:%M:%S') launching stage-2 (max-bin 50, workers 16, anon watchdog @130G)" >> "$L"
 
 python scripts/discover_nllb_pnsn_driven.py --station HDW \
   --bbox 46.5 48.7 -124.3 -122.4 \
   --candidates-out data/hdw_pnsn_candidates.parquet --use-cached-candidates \
   --out data/hdw_pnsn_families.npz \
-  --max-bin-candidates 700 --workers 10 >> "$L" 2>&1 &
+  --max-bin-candidates 50 --workers 16 >> "$L" 2>&1 &
 DPID=$!
 
 # memory watchdog — watches ANON (real, OOM-risk) memory, NOT memory.current (which includes

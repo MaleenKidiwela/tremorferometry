@@ -41,8 +41,8 @@ from scipy.signal import resample_poly  # noqa: E402
 _G = {}
 
 
-def _init_worker(root, station, fs, bandpass):
-    _G.update(root=root, station=station, fs=fs, bandpass=bandpass)
+def _init_worker(root, station, fs, bandpass, despike_mad=0.0):
+    _G.update(root=root, station=station, fs=fs, bandpass=bandpass, despike_mad=despike_mad)
 
 
 def _preprocess(day):
@@ -82,7 +82,17 @@ def _preprocess(day):
     st.detrend("demean")
     st.filter("bandpass", freqmin=bp[0], freqmax=bp[1], corners=4, zerophase=True)
     tr = st[0]
-    return day, tr.data.astype(np.float32), float(tr.stats.starttime.timestamp)
+    data = tr.data.astype(np.float32)
+    dm = _G.get("despike_mad", 0.0)
+    if dm and dm > 0:
+        x = data.astype(np.float64)
+        med = np.median(x)
+        mad = np.median(np.abs(x - med)) * 1.4826
+        if mad > 0:
+            lim = dm * mad
+            np.clip(x, med - lim, med + lim, out=x)
+            data = x.astype(np.float32)
+    return day, data, float(tr.stats.starttime.timestamp)
 
 
 # ---------------- CPU peak-pick over sparse GPU candidates ----------------
@@ -133,6 +143,12 @@ def main():
     p.add_argument("--top-n", type=int, default=100)
     p.add_argument("--qc-median-count", type=int, default=2000)
     p.add_argument("--qc-median-cc", type=float, default=0.96)
+    p.add_argument("--max-raw-det", type=int, default=3_000_000,
+                   help="skip a day if its raw cc>=thr crossing count exceeds this "
+                        "(glitch-day guard; 0 disables). Clean days are well below this.")
+    p.add_argument("--despike-mad", type=float, default=0.0,
+                   help="winsorize (clip) bandpassed samples beyond this many MAD of the day "
+                        "(0=off). Suppresses impulsive glitch days that otherwise trip the QC.")
     p.add_argument("--start-year", type=int, default=0)
     p.add_argument("--end-year", type=int, default=9999)
     p.add_argument("--out-dir", default="data")
@@ -170,6 +186,7 @@ def main():
     n_gap = max(1, int(round(args.min_gap_s * args.fs)))
     qc_count = args.qc_median_count or None
     qc_cc = args.qc_median_cc or None
+    max_raw = args.max_raw_det or None
     _empty = (np.empty(0, np.int64), np.empty(0, np.int64), np.empty(0, np.float32))
 
     def gpu_candidates(data):
@@ -229,7 +246,7 @@ def main():
 
     pool = ProcessPoolExecutor(max_workers=args.workers, mp_context=ctx,
                                initializer=_init_worker,
-                               initargs=(Path(args.wfdir), station, fs, (args.fmin, args.fmax)))
+                               initargs=(Path(args.wfdir), station, fs, (args.fmin, args.fmax), args.despike_mad))
     try:
         for year in years:
             out_csv = out_dir / f"{args.out_prefix}{year}.csv"
@@ -245,6 +262,12 @@ def main():
                 if data is None:
                     continue
                 ti, si, vals = gpu_candidates(data)
+                # glitch-day guard: a pathological raw cc>=thr count (e.g. zero-filled /
+                # constant analog-era segments) means the day will be QC-dropped anyway --
+                # skip BEFORE the O(N) dedup so early/glitchy years don't grind.
+                if max_raw and ti.size > max_raw:
+                    dropped += 1
+                    continue
                 res = _dedup_min_gap(ti, si, vals, n_gap)   # {tmpl_idx: (samp, cc)}
                 if not res:
                     continue
