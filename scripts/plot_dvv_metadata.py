@@ -25,15 +25,17 @@ def parse_args():
     p.add_argument("--out", required=True)
     p.add_argument("--smooth-days", type=int, default=60)
     p.add_argument("--eq-date", default="2001-02-28", help="reference EQ (Nisqually); '' to skip")
+    p.add_argument("--channel", default="*HZ",
+                   help="FDSN channel pattern for metadata epochs (default '*HZ'; e.g. 'EN?' for accelerometer-only sites)")
     return p.parse_args()
 
 
-def metadata_changes(network, station):
+def metadata_changes(network, station, channel="*HZ"):
     """Return sorted list of (date, label, is_major) for every vertical-channel epoch
     boundary, flagging sensor/sample-rate changes as major."""
     c = Client("EARTHSCOPE")
     inv = c.get_stations(network=network, station=station, level="channel",
-                         channel="*HZ", starttime="1985-01-01", endtime="2027-01-01")
+                         channel=channel, starttime="1985-01-01", endtime="2027-01-01")
     eps = []
     for net in inv:
         for sta in net:
@@ -64,7 +66,7 @@ def main():
     med = d.groupby("date")["dvv"].median() * 100
     med = med.rolling(args.smooth_days, center=True, min_periods=args.smooth_days // 3).median()
 
-    changes = metadata_changes(args.network, args.station)
+    changes = metadata_changes(args.network, args.station, args.channel)
     t0, t1 = med.index.min(), med.index.max()
     changes = [(t, l, m) for (t, l, m) in changes if t0 <= t <= t1]
 

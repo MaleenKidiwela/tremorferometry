@@ -19,6 +19,13 @@ figures/*
 !figures/smoke_*.png
 outputs/
 
+# Generated tomography products + interactive map (reproducible from fault_tomography/ code)
+fault_tomography/*.html
+fault_tomography/*.json
+fault_tomography/**/*.parquet
+fault_tomography/data_assembly/*.csv
+fault_tomography/inversion/*.npz
+
 # Catalog CSVs are reproducible from PNSN API + Bostock supplement;
 # don't ship the data, just the code that fetches it.
 catalogs/*.csv
@@ -31,3 +38,5 @@ catalogs/*.parquet
 
 # transient pipeline run logs
 logs/
+fault_tomography/**/*.gif
+fault_tomography/**/*.mp4

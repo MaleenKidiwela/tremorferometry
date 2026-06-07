@@ -23,14 +23,15 @@ from obspy.clients.fdsn.header import FDSNNoDataException
 PREF = ["EHZ", "HHZ", "BHZ", "SHZ"]
 
 
-def fetch(d, client, net, sta, out):
+def fetch(d, client, net, sta, out, loc="*", chpat="?HZ", pref=None):
+    pref = pref or PREF
     p = out / f"{d.year}" / f"{d.timetuple().tm_yday:03d}.mseed"
     if p.exists() and p.stat().st_size > 0:
         return "skip"
     t0 = UTCDateTime(d); t1 = t0 + 86400
     for attempt in (1, 2):
         try:
-            st = client.get_waveforms(net, sta, "*", "?HZ", t0, t1)
+            st = client.get_waveforms(net, sta, loc, chpat, t0, t1)
             break
         except FDSNNoDataException:
             return "nodata"
@@ -39,7 +40,7 @@ def fetch(d, client, net, sta, out):
                 return "fail"
             time.sleep(2)
     codes = {tr.stats.channel for tr in st}
-    pick = next((c for c in PREF if c in codes), None)
+    pick = next((c for c in pref if c in codes), None)
     if pick is None:
         return "nodata"
     st = st.select(channel=pick)
@@ -61,7 +62,15 @@ def main():
     ap.add_argument("--end", required=True, help="YYYY-MM-DD")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--client", default="IRIS")
+    ap.add_argument("--location", default="*",
+                    help="FDSN location code to request (default '*'; e.g. '10' or '--' for blank)")
+    ap.add_argument("--channel", default="?HZ",
+                    help="FDSN channel pattern to request (default '?HZ'; e.g. 'EN?' for accelerometer)")
+    ap.add_argument("--channel-pref", default=None,
+                    help="comma-separated channel priority list (default EHZ,HHZ,BHZ,SHZ); first match kept per day")
     args = ap.parse_args()
+    loc = "" if args.location in ("--", "blank") else args.location
+    pref = [c.strip() for c in args.channel_pref.split(",")] if args.channel_pref else PREF
 
     out = Path(f"data/waveforms/{args.network}.{args.station}")
     start = datetime.fromisoformat(args.start)
@@ -76,7 +85,8 @@ def main():
     counts = {"ok": 0, "skip": 0, "nodata": 0, "fail": 0}
     done = 0; t0 = time.time(); fails = []
     with ThreadPoolExecutor(max_workers=args.workers) as ex:
-        futs = {ex.submit(fetch, dd, client, args.network, args.station, out): dd
+        futs = {ex.submit(fetch, dd, client, args.network, args.station, out,
+                          loc, args.channel, pref): dd
                 for dd in days}
         for f in as_completed(futs):
             r = f.result(); counts[r] += 1; done += 1
