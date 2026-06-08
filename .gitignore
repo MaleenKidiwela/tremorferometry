@@ -17,6 +17,8 @@ data/
 *.npz
 figures/*
 !figures/smoke_*.png
+!figures/station_2to4/
+!figures/station_2to4/*
 outputs/
 
 # Generated tomography products + interactive map (reproducible from fault_tomography/ code)
