@@ -110,6 +110,14 @@ PYTHONPATH=src python scripts/select_coverage_families.py --summary data/<sta>_p
 PYTHONPATH=src python scripts/plot_family_map.py --station <STA> --station-lat LAT --station-lon LON \
   --summary data/<sta>_pnsn_families_100km.summary.csv --min-snr 10 --out figures/smoke_<sta>_family_map.png
 ```
+After the top-10% add-back merge (0a), draw the SELECTION map (greyed pool + highlighted final selection, same
+cartopy basemap as the family map — use this, not select_coverage_families.py's bare scatter, which predates the
+top-10% merge and lacks coastlines):
+```
+PYTHONPATH=src python scripts/plot_selection_map.py --station <STA> --station-lat LAT --station-lon LON \
+  --summary data/<sta>_pnsn_families_100km.summary.csv --selected data/<sta>_coverage_selection.summary.csv \
+  --min-snr <floor> --out figures/smoke_<sta>_coverage_selection.png
+```
 **SHOW the user the candidate maps and WAIT for confirmation before densifying** (the convention this project uses).
 Optional tweaks if asked: add a southern tail, lower floor, k=3 per cell.
 ⚠ **The SNR floor is SENSOR-DEPENDENT — do NOT hard-code 10.** Template SNR = peak/pre-pulse-RMS; borehole (PB)
