@@ -7,7 +7,7 @@ that family's daily line + the median.  Daily data is gzip-compressed per statio
 (pako) so the file stays openable.  Window selector (2-4/1-4/1-3) + deseason switch + local tremor overlay.
 Reads data/daily_dvv_{S}_{2to4,1to4,1to3}_{roll,des}.csv -> fault_tomography/cascadia_dvv_map.html
 """
-import json, gzip, base64
+import os, json, gzip, base64
 import numpy as np, pandas as pd
 from scipy.spatial import cKDTree
 
@@ -19,6 +19,8 @@ STA = {
  'B022':(45.9546,-123.931),'B026':(45.3094,-123.8231),'COLT':(45.17044,-122.438152),'COR':(44.5855,-123.3046),
  'B028':(44.4937,-122.9638),'B030':(43.9713,-122.7717),'B032':(43.668,-123.3923),'B033':(43.2917,-123.1245),
  'B036':(42.5058,-123.3817),'B040':(41.8308,-122.4205),'B039':(41.4667,-122.4847),'B935':(40.4787,-123.5732),
+ 'B017':(46.9960,-123.5575),'B001':(48.0431,-123.1314),'B005':(48.0596,-123.5034),'B003':(48.0623,-124.1416),
+ 'B045':(40.4360,-124.0008),'B932':(40.2825,-124.2245),'B049':(40.2403,-123.8225),  # +7 new (2026-06-10); B933 dropped
 }
 CCMIN = 0.7; MINDAYS = 60
 WINS = [('24','2to4_cal'),('24d','2to4_cal_des'),('13','1to3_cal'),('13d','1to3_cal_des'),('35','3to5_cal'),('35d','3to5_cal_des')]
@@ -26,13 +28,38 @@ WINS = [('24','2to4_cal'),('24d','2to4_cal_des'),('13','1to3_cal'),('13d','1to3_
 def famll(pid):
     a = pid.split('__')[0].split('_'); return float(a[0]), float(a[1])
 
-def daily_block(csv):
-    """Daily 30-day-rolling per family (NO temporal median) + per-day cross-family median."""
+# CONTINUOUS_ONLY=1 -> include only continuous-repeater families (data/family_continuity_classes.csv)
+CONT_ONLY = os.environ.get('CONTINUOUS_ONLY', '0') == '1'
+# EXPANDED stations: use their expanded densify products (_calT_exp) instead of _cal, with continuity
+# computed from the expanded data. B003 expansion pilot -> 427 fam, 367 continuous.
+EXP_STATIONS = {'B003': '_calT_exp'}
+CONT = {}
+if CONT_ONLY:
+    _cc = pd.read_csv('data/family_continuity_classes.csv')
+    for st, g in _cc[_cc.cls == 'continuous'].groupby('sta'):
+        CONT[st] = set(g.patch)
+    # override expanded stations with their expanded continuous set
+    for st in EXP_STATIONS:
+        _e = pd.read_csv(f'data/daily_dvv_{st}_2to4{EXP_STATIONS[st]}.csv', parse_dates=['date'])
+        _ad = pd.Index(sorted(_e.date.unique())); _keep = set()
+        for _p, _g in _e.groupby('patch'):
+            _dt = _g.date.sort_values(); _own = _ad[(_ad >= _dt.iloc[0]) & (_ad <= _dt.iloc[-1])]
+            if len(_dt) / max(len(_own), 1) >= 0.5 and _g.cc_max.median() >= 0.6:
+                _keep.add(_p)
+        CONT[st] = _keep
+        print(f'  EXPANDED {st}: {len(_keep)} continuous families (from {_e.patch.nunique()} expanded)')
+    print(f'CONTINUOUS-ONLY mode: {sum(len(v) for v in CONT.values())} continuous families across {len(CONT)} stations')
+
+def daily_block(csv, allowed=None):
+    """Daily 30-day-rolling per family (NO temporal median) + per-day cross-family median.
+    If `allowed` (a set of patch ids) is given, restrict to those families (continuous-only mode)."""
     try:
         d = pd.read_csv(csv)
     except FileNotFoundError:
         return None
     d = d[d.cc_max > CCMIN].copy()
+    if allowed is not None:
+        d = d[d.patch.isin(allowed)]
     if not len(d):
         return None
     d['ds'] = pd.to_datetime(d['date']).dt.strftime('%Y-%m-%d')
@@ -80,7 +107,8 @@ DATA, DAILY = {}, {}
 for s, (la, lo) in STA.items():
     blocks, ccs = {}, {}
     for k, suf in WINS:
-        b = daily_block(f'data/daily_dvv_{s}_{suf}.csv')
+        _suf = suf.replace('_cal', EXP_STATIONS[s]) if (CONT_ONLY and s in EXP_STATIONS) else suf
+        b = daily_block(f'data/daily_dvv_{s}_{_suf}.csv', allowed=CONT.get(s) if CONT_ONLY else None)
         if b:
             ccs[k] = b.pop('cc'); blocks['s' + k] = b
     if 's24' not in blocks and 's13' not in blocks:
@@ -235,6 +263,8 @@ showStation('GNW');
 </script></body></html>'''
 
 out = HTML.replace('__DATA__', djs).replace('__DAILY__', djson)
-with open('fault_tomography/cascadia_dvv_map.html', 'w') as f:
+_outpath = 'fault_tomography/cascadia_dvv_map_continuous.html' if CONT_ONLY else 'fault_tomography/cascadia_dvv_map.html'
+with open(_outpath, 'w') as f:
     f.write(out)
-print(f'wrote fault_tomography/cascadia_dvv_map.html ({len(out)/1e6:.2f} MB), {len(DATA)} stations')
+print(f'wrote {_outpath} ({len(out)/1e6:.2f} MB), {len(DATA)} stations'
+      + (' [CONTINUOUS-ONLY]' if CONT_ONLY else ''))

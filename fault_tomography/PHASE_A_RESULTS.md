@@ -82,3 +82,126 @@ no per-era/co-location complications), then add the heterogeneous stations.
 Remaining for a real result: add per-station **site terms G_s** (fault-vs-site separation — the seasonal
 signal must land on sites, not the fault), then invert REAL epochs → first δβ/β map → 4-D loop. Then fold
 in the non-borehole + COLT/COR/GNW stations (northern azimuths + pre-2007 reach).
+
+## NULL TEST: Is the southern "hot zone" temporal RMS real or a coverage artifact? (2026-06-10)
+
+**Question:** The real multi-window inversion shows elevated temporal RMS in the sparse south
+(42–44°N: median 0.09–0.15%, 1–2 stations; 40–42°N: median 0.29%, 1–2 stations).  Does this
+reflect genuine fault velocity variability, or is it noise amplified through a sparse design matrix?
+
+**Method:**  `fault_tomography/inversion/null_test.py`
+- Planted fault field: ZERO everywhere, all months.
+- Forward-modelled every real (cell, station, window, month) datum using the real kernels and
+  real coverage pattern.
+- Added synthetic noise drawn per datum from the REAL per-(station, window) residual std, estimated
+  by pooling residuals from the real inversion across all solved months
+  (noise_std range: 0.020–0.909%, median 0.098%).
+- Inverted with identical joint LSQR + Laplacian + site-term machinery (λ_f=0.4, λ_s=0.05).
+- Repeated 25 realisations (different RNG seeds).
+
+**Noise std used (per station|window pair):**
+- Estimated from real inversion residuals (dd − Ĝf mf − Ĝs site), pooled across all ok months.
+- Min: 0.020%, Median: 0.098%, Max: 0.909%.
+
+**Results — null temporal RMS vs observed, by latitude band and station coverage:**
+
+| Lat band | nsta | n cells | obs median (%) | null 95th pct (%) | null max (%) | obs pctile in null |
+|---|---|---|---|---|---|---|
+| 40-42 | 1 | 67 | 0.294 | 0.135 | 0.152 | 100th |
+| 40-42 | 2 | 28 | 0.289 | 0.133 | 0.146 | 100th |
+| 40-42 | 3 | 11 | 0.289 | 0.132 | 0.140 | 100th |
+| 42-44 | 1 | 59 | 0.131 | 0.105 | 0.131 | 100th |
+| 42-44 | 2 | 43 | 0.145 | 0.097 | 0.118 | 100th |
+| 42-44 | 3 | 25 | 0.093 | 0.088 | 0.111 | 100th |
+| 42-44 | >=4 | 6 | 0.052 | 0.053 | 0.060 | 100th |
+| 44-46 | 1 | 47 | 0.050 | 0.079 | 0.099 | 100th |
+| 44-46 | 2 | 22 | 0.057 | 0.073 | 0.083 | 82th |
+| 44-46 | 3 | 19 | 0.050 | 0.067 | 0.074 | 56th |
+| 44-46 | >=4 | 22 | 0.049 | 0.058 | 0.070 | 100th |
+| 46-48 | 1 | 39 | 0.030 | 0.041 | 0.047 | 64th |
+| 46-48 | 2 | 34 | 0.033 | 0.037 | 0.045 | 100th |
+| 46-48 | 3 | 25 | 0.034 | 0.038 | 0.040 | 92th |
+| 46-48 | >=4 | 32 | 0.028 | 0.035 | 0.039 | 52th |
+| 48-50 | 1 | 74 | 0.053 | 0.094 | 0.118 | 100th |
+| 48-50 | 2 | 48 | 0.052 | 0.073 | 0.115 | 78th |
+| 48-50 | 3 | 38 | 0.048 | 0.065 | 0.088 | 100th |
+| 48-50 | >=4 | 18 | 0.044 | 0.051 | 0.057 | 100th |
+
+**Verdict:**
+
+- **40-42 1-sta (n=67):** obs median 0.294% sits at 100th pctile of the null — SIGNIFICANT (exceeds null 95th = 0.135%). Likely real signal or unmodelled systematic.
+- **40-42 2-sta (n=28):** obs median 0.289% sits at 100th pctile of the null — SIGNIFICANT (exceeds null 95th = 0.133%). Likely real signal or unmodelled systematic.
+- **42-44 1-sta (n=59):** obs median 0.131% sits at 100th pctile of the null — SIGNIFICANT (exceeds null 95th = 0.105%). Likely real signal or unmodelled systematic.
+- **42-44 2-sta (n=43):** obs median 0.145% sits at 100th pctile of the null — SIGNIFICANT (exceeds null 95th = 0.097%). Likely real signal or unmodelled systematic.
+
+**Overall conclusion:**
+The null test directly answers the open question from the synthetic resolution test (§4, 2026-06-09).
+Cells where the observed temporal RMS lies within the null distribution (obs_pctile ≤ 95th) are
+consistent with pure noise amplification through the sparse design matrix and should NOT be
+interpreted as real fault velocity change. Cells/classes where the observed RMS significantly
+exceeds the null distribution warrant further investigation.
+
+Figure: `figures/null_test_southern.png`
+Result archive: `fault_tomography/inversion/null_test_results.npz`
+
+## NULL TEST: Is the southern "hot zone" temporal RMS real or a coverage artifact? (2026-06-10)
+
+**Question:** The real multi-window inversion shows elevated temporal RMS in the sparse south
+(42–44°N: median 0.09–0.15%, 1–2 stations; 40–42°N: median 0.29%, 1–2 stations).  Does this
+reflect genuine fault velocity variability, or is it noise amplified through a sparse design matrix?
+
+**Method:**  `fault_tomography/inversion/null_test.py`
+- Planted fault field: ZERO everywhere, all months.
+- Forward-modelled every real (cell, station, window, month) datum using the real kernels and
+  real coverage pattern.
+- Added synthetic noise drawn per datum from the REAL per-(station, window) residual std, estimated
+  by pooling residuals from the real inversion across all solved months
+  (noise_std range: 0.036–0.700%, median 0.193%).
+- Inverted with identical joint LSQR + Laplacian + site-term machinery (λ_f=0.4, λ_s=0.05).
+- Repeated 25 realisations (different RNG seeds).
+
+**Noise std used (per station|window pair):**
+- Estimated from real inversion residuals (dd − Ĝf mf − Ĝs site), pooled across all ok months.
+- Min: 0.036%, Median: 0.193%, Max: 0.700%.
+
+**Results — null temporal RMS vs observed, by latitude band and station coverage:**
+
+| Lat band | nsta | n cells | obs median (%) | null 95th pct (%) | null max (%) | obs pctile in null |
+|---|---|---|---|---|---|---|
+| 40-42 | 1 | 57 | 0.190 | 0.290 | 0.323 | 40th |
+| 40-42 | 2 | 34 | 0.198 | 0.289 | 0.324 | 48th |
+| 40-42 | 3 | 20 | 0.191 | 0.288 | 0.308 | 48th |
+| 40-42 | >=4 | 14 | 0.194 | 0.290 | 0.304 | 44th |
+| 42-44 | 1 | 59 | 0.132 | 0.218 | 0.265 | 40th |
+| 42-44 | 2 | 43 | 0.141 | 0.218 | 0.255 | 48th |
+| 42-44 | 3 | 25 | 0.113 | 0.198 | 0.247 | 40th |
+| 42-44 | >=4 | 6 | 0.095 | 0.131 | 0.164 | 60th |
+| 44-46 | 1 | 47 | 0.063 | 0.078 | 0.104 | 100th |
+| 44-46 | 2 | 22 | 0.069 | 0.069 | 0.091 | 98th |
+| 44-46 | 3 | 19 | 0.059 | 0.090 | 0.112 | 64th |
+| 44-46 | >=4 | 22 | 0.058 | 0.069 | 0.091 | 98th |
+| 46-48 | 1 | 37 | 0.054 | 0.066 | 0.075 | 100th |
+| 46-48 | 2 | 25 | 0.055 | 0.065 | 0.074 | 100th |
+| 46-48 | 3 | 21 | 0.051 | 0.060 | 0.069 | 92th |
+| 46-48 | >=4 | 60 | 0.055 | 0.059 | 0.068 | 96th |
+| 48-50 | 1 | 60 | 0.097 | 0.160 | 0.196 | 100th |
+| 48-50 | 2 | 49 | 0.088 | 0.131 | 0.191 | 100th |
+| 48-50 | 3 | 34 | 0.082 | 0.121 | 0.158 | 100th |
+| 48-50 | >=4 | 46 | 0.069 | 0.083 | 0.097 | 100th |
+
+**Verdict:**
+
+- **40-42 1-sta (n=57):** obs median 0.190% sits at 40th pctile of the null (null 95th = 0.290%, null max = 0.323%). CANNOT BE DISTINGUISHED from noise amplification — likely a COVERAGE ARTIFACT.
+- **40-42 2-sta (n=34):** obs median 0.198% sits at 48th pctile of the null (null 95th = 0.289%, null max = 0.324%). CANNOT BE DISTINGUISHED from noise amplification — likely a COVERAGE ARTIFACT.
+- **42-44 1-sta (n=59):** obs median 0.132% sits at 40th pctile of the null (null 95th = 0.218%, null max = 0.265%). CANNOT BE DISTINGUISHED from noise amplification — likely a COVERAGE ARTIFACT.
+- **42-44 2-sta (n=43):** obs median 0.141% sits at 48th pctile of the null (null 95th = 0.218%, null max = 0.255%). CANNOT BE DISTINGUISHED from noise amplification — likely a COVERAGE ARTIFACT.
+
+**Overall conclusion:**
+The null test directly answers the open question from the synthetic resolution test (§4, 2026-06-09).
+Cells where the observed temporal RMS lies within the null distribution (obs_pctile ≤ 95th) are
+consistent with pure noise amplification through the sparse design matrix and should NOT be
+interpreted as real fault velocity change. Cells/classes where the observed RMS significantly
+exceeds the null distribution warrant further investigation.
+
+Figure: `figures/null_test_southern.png`
+Result archive: `fault_tomography/inversion/null_test_results_calT35.npz`

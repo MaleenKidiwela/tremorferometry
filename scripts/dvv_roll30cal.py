@@ -16,9 +16,17 @@ sys.path.insert(0, "src")
 from tremorferometry.dvv import stretch_dvv  # noqa: E402
 
 _C = {}
-def _init(t, fs, w1, w2, days, minst, mindays, neps):
-    _C.update(t=t, fs=fs, tmin=w1 - t[0], tmax=w2 - t[0], days=int(days), minst=int(minst),
-              mindays=int(mindays), neps=int(neps), prenoise=(t < -1.0))
+def _init(t, fs, w1, w2, days, minst, mindays, neps, anchor=False, t_s=1.0):
+    # anchor=True: stretch about the PINNED DIRECT-S (the matched-filter alignment fixed point),
+    # empirically at t_s=+1.0 s (envelope peak; confirmed by dt-vs-lapse). NOT t=0 (= the detection
+    # time, 1 s before the S) and NOT sample 0 (t[0]=-3 s). Anchoring at the S gives dv/v = -eps directly
+    # and makes the 1-3/2-4/3-5 s windows mutually scale-consistent. Anchoring 1 s early (the old t=0
+    # "origin" anchor) still under-reads window-dependently: (c-0)/(c-1) = 0.50/0.67/0.75x.
+    i0 = int(np.searchsorted(t, t_s)) if anchor else 0
+    tmin = (w1 - t_s if anchor else w1 - t[0])
+    tmax = (w2 - t_s if anchor else w2 - t[0])
+    _C.update(t=t, fs=fs, tmin=tmin, tmax=tmax, days=int(days), minst=int(minst),
+              mindays=int(mindays), neps=int(neps), prenoise=(t < -1.0), i0=i0)
 
 def _family(arg):
     patch, S, dstr = arg
@@ -43,10 +51,11 @@ def _family(arg):
     except np.linalg.LinAlgError:
         Rf = Rn
     ref = Rf.mean(0)
+    i0 = _C["i0"]
     rows = []
     for i in range(ne):
         try:
-            r = stretch_dvv(ref, Rf[i], fs=_C["fs"], t_min=_C["tmin"], t_max=_C["tmax"], eps_max=0.02, n_eps=_C["neps"])
+            r = stretch_dvv(ref[i0:], Rf[i, i0:], fs=_C["fs"], t_min=_C["tmin"], t_max=_C["tmax"], eps_max=0.02, n_eps=_C["neps"])
             rows.append((patch, Dr[i], float(r.dvv), float(r.cc_max), int(ck[i])))
         except Exception:
             pass
@@ -59,6 +68,8 @@ def main():
     p.add_argument("--days", type=int, default=30); p.add_argument("--min-stacks", type=int, default=5)
     p.add_argument("--mindays", type=int, default=60); p.add_argument("--n-eps", type=int, default=201)
     p.add_argument("--workers", type=int, default=28); p.add_argument("--out", required=True)
+    p.add_argument("--origin-anchor", action="store_true",
+                   help="stretch about the LFE origin (t=0), not sample 0 — true-scale dv/v (~2.3x larger in 2-4 s)")
     args = p.parse_args()
     import multiprocessing as mp
     from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -72,7 +83,7 @@ def main():
     ctx = mp.get_context("spawn"); out = []
     with ProcessPoolExecutor(max_workers=args.workers, mp_context=ctx, initializer=_init,
                              initargs=(t, fs, args.window[0], args.window[1], args.days, args.min_stacks,
-                                       args.mindays, args.n_eps)) as ex:
+                                       args.mindays, args.n_eps, args.origin_anchor)) as ex:
         futs = [ex.submit(_family, tk) for tk in tasks]
         for f in as_completed(futs):
             out.extend(f.result())

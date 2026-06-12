@@ -17,7 +17,7 @@ from kernel import kernel_singlescatter
 
 GRID = 0.10; BETA = 3.5; LSTAR = 40.0; CCMIN = 0.7
 DES = os.environ.get('DESEASON', '1') == '1'          # DESEASON=0 -> raw (seasonal kept; should land in site terms)
-_sfx = '_cal_des' if DES else '_cal'
+_sfx = os.environ.get('SFX', '_cal_des' if DES else '_cal')   # e.g. SFX=_calT_des for true-scale redo
 WINS = [('13', 1.0, 3.0, '1to3'+_sfx), ('24', 2.0, 4.0, '2to4'+_sfx), ('35', 3.0, 5.0, '3to5'+_sfx)]
 STA = {
  'B927':(49.2188,-124.8113),'NLLB':(49.2271,-123.9882),'B928':(48.834,-125.134),'PGC':(48.6498,-123.4521),
@@ -27,15 +27,32 @@ STA = {
  'B022':(45.9546,-123.931),'B026':(45.3094,-123.8231),'COLT':(45.17044,-122.438152),'COR':(44.5855,-123.3046),
  'B028':(44.4937,-122.9638),'B030':(43.9713,-122.7717),'B032':(43.668,-123.3923),'B033':(43.2917,-123.1245),
  'B036':(42.5058,-123.3817),'B040':(41.8308,-122.4205),'B039':(41.4667,-122.4847),'B935':(40.4787,-123.5732),
+ 'B017':(46.9960,-123.5575),'B001':(48.0431,-123.1314),'B005':(48.0596,-123.5034),'B003':(48.0623,-124.1416),
+ 'B045':(40.4360,-124.0008),'B932':(40.2825,-124.2245),'B049':(40.2403,-123.8225),  # +7 new 2026-06-10; B933 dropped
 }
+
+# CONTINUOUS_ONLY=1 -> use only continuous-repeater families (data/family_continuity_classes.csv),
+# dropping episodic families that inject noise into the dv/v (and hence the inversion).
+CONT_ONLY = os.environ.get('CONTINUOUS_ONLY', '0') == '1'
+CONT = {}
+if CONT_ONLY:
+    _cc = pd.read_csv('data/family_continuity_classes.csv')
+    for st, g in _cc[_cc.cls == 'continuous'].groupby('sta'):
+        CONT[st] = set(g.patch)
+    print(f'CONTINUOUS-ONLY: {sum(len(v) for v in CONT.values())} continuous families across {len(CONT)} stations')
 
 # ---- 1. assemble combined monthly tensor across the 3 windows ----
 parts = []
 for s, (sla, slo) in STA.items():
     for wk, w1, w2, suf in WINS:
-        f = f'data/daily_dvv_{s}_{suf}.csv'
+        # EXP_STA/EXP_SFX: use a single station's EXPANDED dv/v (pilot A/B), other stations unchanged
+        _EXP_STA = os.environ.get('EXP_STA'); _EXP_SFX = os.environ.get('EXP_SFX')
+        suf_use = suf.replace(_sfx, _EXP_SFX) if (_EXP_STA and s == _EXP_STA and _EXP_SFX) else suf
+        f = f'data/daily_dvv_{s}_{suf_use}.csv'
         if not os.path.exists(f): continue
         d = pd.read_csv(f); d = d[d.cc_max > CCMIN]
+        if CONT_ONLY:
+            d = d[d.patch.isin(CONT.get(s, set()))]
         if not len(d): continue
         pre = d.patch.astype(str).str.split('__').str[0]
         plat = pre.str.split('_').str[0].astype(float); plon = pre.str.split('_', n=1).str[1].astype(float)
@@ -118,7 +135,7 @@ print(f'inverted {ok.sum()}/{len(months)} months; mean VR {100*np.nanmean(VR[ok]
 print(f'resolved cells (>=3 sta): {well.sum()} | temporal RMS among resolved: median {np.median(cell_var[well]):.3f}% max {cell_var[well].max():.3f}%')
 fidx = np.nanmean(MF[well][:, ok], axis=0)
 print(f'network fault index range [{np.nanmin(fidx):.3f},{np.nanmax(fidx):.3f}] %')
-OUT = 'fault_tomography/inversion/fault_4d_multiwin%s.npz' % ('' if DES else '_raw')
+OUT = os.environ.get('OUT', 'fault_tomography/inversion/fault_4d_multiwin%s.npz' % ('' if DES else '_raw'))
 np.savez(OUT, months=np.array(months), lat=cells.clat.values, lon=cells.clon.values, depth=cells.depth_km.values,
          nsta=cells.n_stations.values, MF=MF, VR=VR, ND=ND, ok=ok, well=well, cell_var=cell_var, fault_idx=fidx,
          SITE=SITE, site_labels=np.array(swu), deseasoned=DES)

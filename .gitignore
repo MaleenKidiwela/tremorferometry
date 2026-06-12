@@ -42,3 +42,7 @@ catalogs/*.parquet
 logs/
 fault_tomography/**/*.gif
 fault_tomography/**/*.mp4
+
+# Local Claude config (do not commit)
+.claude/settings.local.json
+figures/station_2to4/.ipynb_checkpoints/

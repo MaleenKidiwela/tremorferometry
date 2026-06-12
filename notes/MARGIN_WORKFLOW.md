@@ -103,6 +103,13 @@ PYTHONPATH=src python scripts/discover_gpu.py --station <STA> \
 Writes `.npz` + `.summary.csv` (WITH `snr` col = env-peak/pre-pulse-RMS) + `.members.parquet`. ~1–2 min, anon ~2 G.
 
 ### 2f. Coverage selection + candidate maps → PAUSE for user confirm
+**NEW (2026-06-10) — TEMPLATE-SHAPE PRE-SCREEN before selection.** Drop noise-like / contaminant families
+(they come out gappy/low-cc = wasted densify) using the discovery-stage templates in `<sta>_pnsn_families_100km.npz`.
+Verified rule (grpCV AUC 0.92, see [[family-cwi-predictor]] / `scripts/family_predictor.py`): flag families with
+**spectral centroid > 4.3 Hz AND kurtosis > 4** as BAD and exclude from the eligible pool BEFORE coverage+top-10%
+selection (97% precision, removes ~47% of BADs, loses 0.4% of GOODs). GOOD LFEs are low-frequency (centroid ~3.4 Hz)
+and emergent (low kurtosis); contaminants are high-freq and spiky. Compute centroid/kurtosis per template from the
+npz, intersect the kept set with the SNR-floored pool, then proceed:
 ```
 PYTHONPATH=src python scripts/select_coverage_families.py --summary data/<sta>_pnsn_families_100km.summary.csv \
   --station-lat LAT --station-lon LON --min-snr 10 --az-sectors 12 --dist-rings "0,20,40,65,100" --k 2 \
