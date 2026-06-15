@@ -9,6 +9,10 @@ venv/
 
 # Data / outputs
 data/
+# LFE-feature side-exploration: ship code+docs+figures, not the large reproducible products
+lfe_features/data/
+lfe_features/models/
+lfe_features/__pycache__/
 *.mseed
 *.sac
 *.h5
