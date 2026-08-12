@@ -47,9 +47,9 @@ catalogs/*.csv
 catalogs/*.parquet
 # NOTE: gitignore has NO trailing comments -- a `# ...` after a pattern becomes part of the
 # pattern and silently matches nothing.
-# pnsn_tremor_cascadia_full.csv (55 MB) is REQUIRED by invert_dvv_4d.py (ETS phase split) but is
-# deliberately NOT shipped: too large, and re-fetchable from the PNSN API. Fetch it before
-# re-running the inversion.
+# pnsn_tremor_cascadia_full.csv (55 MB) is REQUIRED by invert_dvv_4d.py (ETS phase split), so it
+# IS shipped despite its size (under GitHub's 100 MB hard limit; over the 50 MB warning threshold).
+!catalogs/pnsn_tremor_cascadia_full.csv
 
 # nested git repo (cloned paper source) -- would commit as a broken gitlink/submodule
 catalogs/ducellier_catalog/
