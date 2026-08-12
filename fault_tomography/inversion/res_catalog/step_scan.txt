@@ -1,0 +1,8 @@
+boundaries scanned: 156 (>=5 families each) across 76 stations
+COMMON step |b| (data-space %): median 0.142  p90 0.372  max 0.832
+LEAK (family spread) %:          median 0.192  p90 0.360  max 0.677
+PLACEBO common |b| median 0.073  leak median 0.167  (n=59)
+significant boundaries (common |b| > 2x placebo-common-p90=0.811%): 1
+THRESHOLDS: common>0.05% -> per-era ref mandatory (v2); leak>0.02% -> era-split rerun (v1)
+  common median 0.142 EXCEEDS 0.05% ; leak median 0.192 EXCEEDS 0.02%
+boundary-date histogram (clustered-upgrade check): 2009:3 2010:7 2011:8 2012:5 2013:2 2014:5 2015:9 2016:9 2017:8 2018:5 2019:4 2020:22 2021:11 2022:12 2023:17 2024:13 2025:16

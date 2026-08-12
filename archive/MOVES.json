@@ -1,0 +1,1112 @@
+[
+ {
+  "from": "fault_tomography/inversion/checkerboard_ablation.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/checkerboard_ablation.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/checkerboard_corrected.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/checkerboard_corrected.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/checkerboard_epochs.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/checkerboard_epochs.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/checkerboard_grid_corrected.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/checkerboard_grid_corrected.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/common_mode_surface.py",
+  "to": "archive/exploratory_analyses/fault_tomography/inversion/common_mode_surface.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/ets_composite_confirm.py",
+  "to": "archive/exploratory_analyses/fault_tomography/inversion/ets_composite_confirm.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/ets_one_cell.py",
+  "to": "archive/exploratory_analyses/fault_tomography/inversion/ets_one_cell.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/forward.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/forward.py",
+  "tracked": true
+ },
+ {
+  "from": "fault_tomography/inversion/gates_AB.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/gates_AB.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/interface_single_ts.py",
+  "to": "archive/exploratory_analyses/fault_tomography/inversion/interface_single_ts.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/invert_4d.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/invert_4d.py",
+  "tracked": true
+ },
+ {
+  "from": "fault_tomography/inversion/invert_4d_figures.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/invert_4d_figures.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/invert_coarse_cm.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/invert_coarse_cm.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/invert_epoch.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/invert_epoch.py",
+  "tracked": true
+ },
+ {
+  "from": "fault_tomography/inversion/invert_multiwin.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/invert_multiwin.py",
+  "tracked": true
+ },
+ {
+  "from": "fault_tomography/inversion/invert_volume3d.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/invert_volume3d.py",
+  "tracked": true
+ },
+ {
+  "from": "fault_tomography/inversion/invert_volume_cm.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/invert_volume_cm.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/kernel_cv.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/kernel_cv.py",
+  "tracked": true
+ },
+ {
+  "from": "fault_tomography/inversion/monthly_index.py",
+  "to": "archive/exploratory_analyses/fault_tomography/inversion/monthly_index.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/monthly_movie.py",
+  "to": "archive/exploratory_analyses/fault_tomography/inversion/monthly_movie.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/null_test.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/null_test.py",
+  "tracked": true
+ },
+ {
+  "from": "fault_tomography/inversion/plot_coarse_cm.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/plot_coarse_cm.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/plot_dbb_maps.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/plot_dbb_maps.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/plot_deep_index_coarse.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/plot_deep_index_coarse.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/plot_deep_index_monthly.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/plot_deep_index_monthly.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/plot_ets_index_coarse.py",
+  "to": "archive/exploratory_analyses/fault_tomography/inversion/plot_ets_index_coarse.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/plot_families_map.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/plot_families_map.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/plot_inversion_full.py",
+  "to": "archive/superseded_inversions/fault_tomography/inversion/plot_inversion_full.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/resolution_through_time.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/resolution_through_time.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/sensitivity_atlas.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/sensitivity_atlas.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/site_seasonality.py",
+  "to": "archive/exploratory_analyses/fault_tomography/inversion/site_seasonality.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/step_scan.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/step_scan.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/step_scan_v2.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/step_scan_v2.py",
+  "tracked": false
+ },
+ {
+  "from": "fault_tomography/inversion/synth_resolution.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/synth_resolution.py",
+  "tracked": true
+ },
+ {
+  "from": "fault_tomography/inversion/volume3d_checkerboard.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/volume3d_checkerboard.py",
+  "tracked": true
+ },
+ {
+  "from": "fault_tomography/inversion/volume3d_checkerboard_new.py",
+  "to": "archive/resolution_study/fault_tomography/inversion/volume3d_checkerboard_new.py",
+  "tracked": false
+ },
+ {
+  "from": "lfe_features/analyze_lfe_features.py",
+  "to": "archive/lfe_features_thread/lfe_features/analyze_lfe_features.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/analyze_multiclass.py",
+  "to": "archive/lfe_features_thread/lfe_features/analyze_multiclass.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/build_picker_dataset.py",
+  "to": "archive/lfe_features_thread/lfe_features/build_picker_dataset.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/build_picker_v0.py",
+  "to": "archive/lfe_features_thread/lfe_features/build_picker_v0.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/build_tremor_picker.py",
+  "to": "archive/lfe_features_thread/lfe_features/build_tremor_picker.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/cluster_explore.py",
+  "to": "archive/lfe_features_thread/lfe_features/cluster_explore.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/compare_discovery.py",
+  "to": "archive/lfe_features_thread/lfe_features/compare_discovery.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/deseason_dvv.py",
+  "to": "archive/lfe_features_thread/lfe_features/deseason_dvv.py",
+  "tracked": false
+ },
+ {
+  "from": "lfe_features/discovery_filter_demo.py",
+  "to": "archive/lfe_features_thread/lfe_features/discovery_filter_demo.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/extract_colocated_bb.py",
+  "to": "archive/lfe_features_thread/lfe_features/extract_colocated_bb.py",
+  "tracked": false
+ },
+ {
+  "from": "lfe_features/extract_eq_negatives.py",
+  "to": "archive/lfe_features_thread/lfe_features/extract_eq_negatives.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/extract_features.py",
+  "to": "archive/lfe_features_thread/lfe_features/extract_features.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/extract_lin_positives.py",
+  "to": "archive/lfe_features_thread/lfe_features/extract_lin_positives.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/extract_spectrograms.py",
+  "to": "archive/lfe_features_thread/lfe_features/extract_spectrograms.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/extract_tremor_noise.py",
+  "to": "archive/lfe_features_thread/lfe_features/extract_tremor_noise.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/fam_level_filter.py",
+  "to": "archive/lfe_features_thread/lfe_features/fam_level_filter.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/family_stack_test.py",
+  "to": "archive/lfe_features_thread/lfe_features/family_stack_test.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/feature_defs.py",
+  "to": "archive/lfe_features_thread/lfe_features/feature_defs.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/plot_family_3comp.py",
+  "to": "archive/lfe_features_thread/lfe_features/plot_family_3comp.py",
+  "tracked": false
+ },
+ {
+  "from": "lfe_features/plot_stack_examples.py",
+  "to": "archive/lfe_features_thread/lfe_features/plot_stack_examples.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/refine_lin_picks.py",
+  "to": "archive/lfe_features_thread/lfe_features/refine_lin_picks.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/scan_continuous.py",
+  "to": "archive/lfe_features_thread/lfe_features/scan_continuous.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/score_family_stacks_picker.py",
+  "to": "archive/lfe_features_thread/lfe_features/score_family_stacks_picker.py",
+  "tracked": false
+ },
+ {
+  "from": "lfe_features/train_autoencoder.py",
+  "to": "archive/lfe_features_thread/lfe_features/train_autoencoder.py",
+  "tracked": true
+ },
+ {
+  "from": "lfe_features/train_broadband_picker.py",
+  "to": "archive/lfe_features_thread/lfe_features/train_broadband_picker.py",
+  "tracked": false
+ },
+ {
+  "from": "lfe_features/train_phasenet.py",
+  "to": "archive/lfe_features_thread/lfe_features/train_phasenet.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/00_smoke_synthetic.py",
+  "to": "archive/legacy_gnw/scripts/00_smoke_synthetic.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/00b_fetch_pnsn_tremor.py",
+  "to": "archive/legacy_gnw/scripts/00b_fetch_pnsn_tremor.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/01_define_episode.py",
+  "to": "archive/legacy_gnw/scripts/01_define_episode.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/02b_ingest_lin_catalog.py",
+  "to": "archive/legacy_gnw/scripts/02b_ingest_lin_catalog.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/04_fetch_waveforms.py",
+  "to": "archive/legacy_gnw/scripts/04_fetch_waveforms.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/09_aggregate_plot.py",
+  "to": "archive/legacy_gnw/scripts/09_aggregate_plot.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/ab_continuous_inversion.sh",
+  "to": "archive/oneoff_drivers/scripts/ab_continuous_inversion.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/add_reverse_dvv.sh",
+  "to": "archive/misc/scripts/add_reverse_dvv.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/auto_dvv_b926.sh",
+  "to": "archive/superseded_or_support/scripts/auto_dvv_b926.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/autocorr_dvv.py",
+  "to": "archive/superseded_or_support/scripts/autocorr_dvv.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/b003_permonth_eval.py",
+  "to": "archive/experiments/scripts/b003_permonth_eval.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/b011_pgc_validation.py",
+  "to": "archive/oneoff_drivers/scripts/b011_pgc_validation.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/b018_daynight_test.sh",
+  "to": "archive/experiments/scripts/b018_daynight_test.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/backfill_pgc_2005-2013.py",
+  "to": "archive/legacy_gnw/scripts/backfill_pgc_2005-2013.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/backfill_waveforms.py",
+  "to": "archive/legacy_gnw/scripts/backfill_waveforms.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/battery_gate.sh",
+  "to": "archive/experiments/scripts/battery_gate.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/battery_gate_dvv.py",
+  "to": "archive/experiments/scripts/battery_gate_dvv.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/bench_step_recovery.py",
+  "to": "archive/superseded_or_support/scripts/bench_step_recovery.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/borehole_cpu_tail.sh",
+  "to": "archive/misc/scripts/borehole_cpu_tail.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/borehole_gpu_phase.sh",
+  "to": "archive/oneoff_drivers/scripts/borehole_gpu_phase.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/borehole_gpu_phase_fwd.sh",
+  "to": "archive/oneoff_drivers/scripts/borehole_gpu_phase_fwd.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/borehole_pipeline.sh",
+  "to": "archive/misc/scripts/borehole_pipeline.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/borehole_pipeline_conc.sh",
+  "to": "archive/misc/scripts/borehole_pipeline_conc.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/build_dvv_map.py",
+  "to": "archive/superseded_or_support/scripts/build_dvv_map.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/build_long_window_daily_all51.py",
+  "to": "archive/legacy_gnw/scripts/build_long_window_daily_all51.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/build_long_window_resp.py",
+  "to": "archive/superseded_or_support/scripts/build_long_window_resp.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/build_mirror_npz.py",
+  "to": "archive/superseded_or_support/scripts/build_mirror_npz.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/build_trailing_stacks.py",
+  "to": "archive/superseded_or_support/scripts/build_trailing_stacks.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/build_volume3d_html.py",
+  "to": "archive/superseded_or_support/scripts/build_volume3d_html.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/certify_fwd_vs_rev.py",
+  "to": "archive/misc/scripts/certify_fwd_vs_rev.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/chain_b011_certify.sh",
+  "to": "archive/oneoff_drivers/scripts/chain_b011_certify.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/chain_b011_densify.sh",
+  "to": "archive/oneoff_drivers/scripts/chain_b011_densify.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/chain_b011_downstream.sh",
+  "to": "archive/oneoff_drivers/scripts/chain_b011_downstream.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/cheap_cert_experiment.py",
+  "to": "archive/experiments/scripts/cheap_cert_experiment.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/clrs_densify_causality.sh",
+  "to": "archive/oneoff_drivers/scripts/clrs_densify_causality.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/clrs_discovery.sh",
+  "to": "archive/oneoff_drivers/scripts/clrs_discovery.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/clrs_new_cohort.sh",
+  "to": "archive/oneoff_drivers/scripts/clrs_new_cohort.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/clrs_two_arm.sh",
+  "to": "archive/oneoff_drivers/scripts/clrs_two_arm.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/compare_mirror_rev.py",
+  "to": "archive/experiments/scripts/compare_mirror_rev.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/consolidate35.sh",
+  "to": "archive/oneoff_drivers/scripts/consolidate35.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/continue_29.sh",
+  "to": "archive/oneoff_drivers/scripts/continue_29.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/densify_gnw_fast.py",
+  "to": "archive/misc/scripts/densify_gnw_fast.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/densify_launcher.py",
+  "to": "archive/oneoff_drivers/scripts/densify_launcher.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/densify_nllb_seeds.py",
+  "to": "archive/legacy_gnw/scripts/densify_nllb_seeds.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/deseason_cal.py",
+  "to": "archive/superseded_or_support/scripts/deseason_cal.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/discover_nllb_lin_seeded.py",
+  "to": "archive/legacy_gnw/scripts/discover_nllb_lin_seeded.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/discover_prep_queue.sh",
+  "to": "archive/oneoff_drivers/scripts/discover_prep_queue.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/discovery_prep_station.sh",
+  "to": "archive/oneoff_drivers/scripts/discovery_prep_station.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/download_b011_3comp_2018_2026.py",
+  "to": "archive/superseded_or_support/scripts/download_b011_3comp_2018_2026.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/download_b927_horizontals.py",
+  "to": "archive/superseded_or_support/scripts/download_b927_horizontals.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/download_borehole_3comp.py",
+  "to": "archive/superseded_or_support/scripts/download_borehole_3comp.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/download_hdw.py",
+  "to": "archive/legacy_gnw/scripts/download_hdw.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/download_lin_region.py",
+  "to": "archive/superseded_or_support/scripts/download_lin_region.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/download_pgc_broadband.py",
+  "to": "archive/oneoff_drivers/scripts/download_pgc_broadband.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/download_queue.sh",
+  "to": "archive/oneoff_drivers/scripts/download_queue.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/download_wave_queue.sh",
+  "to": "archive/oneoff_drivers/scripts/download_wave_queue.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/dvv_2to4_monthly.py",
+  "to": "archive/superseded_or_support/scripts/dvv_2to4_monthly.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/dvv_2to4_roll30svd.py",
+  "to": "archive/superseded_or_support/scripts/dvv_2to4_roll30svd.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/dvv_coda_51.py",
+  "to": "archive/superseded_or_support/scripts/dvv_coda_51.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/dvv_coda_dual_ref.py",
+  "to": "archive/superseded_or_support/scripts/dvv_coda_dual_ref.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/dvv_coda_parallel.py",
+  "to": "archive/superseded_or_support/scripts/dvv_coda_parallel.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/dvv_coda_perera.py",
+  "to": "archive/superseded_or_support/scripts/dvv_coda_perera.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/dvv_pairwise.py",
+  "to": "archive/superseded_or_support/scripts/dvv_pairwise.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/dvv_roll30cal_gpu.py",
+  "to": "archive/superseded_or_support/scripts/dvv_roll30cal_gpu.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/exp_b935_detclean_build.py",
+  "to": "archive/experiments/scripts/exp_b935_detclean_build.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/exp_b935_detclean_compare.sh",
+  "to": "archive/experiments/scripts/exp_b935_detclean_compare.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/exp_b935_detclean_probe.py",
+  "to": "archive/experiments/scripts/exp_b935_detclean_probe.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/exp_b935_t2a_slope.py",
+  "to": "archive/experiments/scripts/exp_b935_t2a_slope.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/exp_t2a_B018.py",
+  "to": "archive/experiments/scripts/exp_t2a_B018.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/exp_t2a_fixed.py",
+  "to": "archive/experiments/scripts/exp_t2a_fixed.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/expand_b003_pilot.sh",
+  "to": "archive/experiments/scripts/expand_b003_pilot.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/extract_nllb_templates.py",
+  "to": "archive/legacy_gnw/scripts/extract_nllb_templates.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/family_audition.py",
+  "to": "archive/experiments/scripts/family_audition.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/family_fingerprint.py",
+  "to": "archive/misc/scripts/family_fingerprint.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/family_predictor.py",
+  "to": "archive/experiments/scripts/family_predictor.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/family_trust_tier0.py",
+  "to": "archive/experiments/scripts/family_trust_tier0.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/family_trust_tier1.py",
+  "to": "archive/experiments/scripts/family_trust_tier1.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/finalize_3comp_dvv.py",
+  "to": "archive/superseded_or_support/scripts/finalize_3comp_dvv.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/finish_batch6.sh",
+  "to": "archive/oneoff_drivers/scripts/finish_batch6.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/fix_2017_b011.sh",
+  "to": "archive/oneoff_drivers/scripts/fix_2017_b011.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/fix_2017_b926_b011.sh",
+  "to": "archive/oneoff_drivers/scripts/fix_2017_b926_b011.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/fleet_batch.sh",
+  "to": "archive/oneoff_drivers/scripts/fleet_batch.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/fleet_broadband_all.sh",
+  "to": "archive/misc/scripts/fleet_broadband_all.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/fleet_download_ahead.sh",
+  "to": "archive/superseded_or_support/scripts/fleet_download_ahead.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/gate_3comp_dvv_b926.py",
+  "to": "archive/superseded_or_support/scripts/gate_3comp_dvv_b926.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/gpu_stage2_launcher.py",
+  "to": "archive/oneoff_drivers/scripts/gpu_stage2_launcher.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/hdw_watchdog.sh",
+  "to": "archive/legacy_gnw/scripts/hdw_watchdog.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/illustrate_causality.py",
+  "to": "archive/plots_oneoff/scripts/illustrate_causality.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/lin_coinc_b926.py",
+  "to": "archive/experiments/scripts/lin_coinc_b926.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/lin_coincidence_b011.py",
+  "to": "archive/experiments/scripts/lin_coincidence_b011.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/lin_lag_histogram_b011.py",
+  "to": "archive/experiments/scripts/lin_lag_histogram_b011.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/make_40hz_npz.py",
+  "to": "archive/superseded_or_support/scripts/make_40hz_npz.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/merge_stacks.py",
+  "to": "archive/superseded_or_support/scripts/merge_stacks.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/merge_year_into_npz.py",
+  "to": "archive/superseded_or_support/scripts/merge_year_into_npz.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/pgc_30day_stack_test.py",
+  "to": "archive/oneoff_drivers/scripts/pgc_30day_stack_test.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/pgc_dvv_pipeline.sh",
+  "to": "archive/oneoff_drivers/scripts/pgc_dvv_pipeline.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/pgc_hhz_stack_test.py",
+  "to": "archive/oneoff_drivers/scripts/pgc_hhz_stack_test.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/pgc_mirror_build.sh",
+  "to": "archive/oneoff_drivers/scripts/pgc_mirror_build.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/pgc_stack_test.py",
+  "to": "archive/oneoff_drivers/scripts/pgc_stack_test.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_b011_tremor_100km.py",
+  "to": "archive/plots_oneoff/scripts/plot_b011_tremor_100km.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_b926_530.py",
+  "to": "archive/plots_oneoff/scripts/plot_b926_530.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_candidate_map.py",
+  "to": "archive/plots_oneoff/scripts/plot_candidate_map.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_corrected_dvv.py",
+  "to": "archive/plots_oneoff/scripts/plot_corrected_dvv.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_downdip_edge.py",
+  "to": "archive/legacy_gnw/scripts/plot_downdip_edge.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_dvv_ehz_south.py",
+  "to": "archive/plots_oneoff/scripts/plot_dvv_ehz_south.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_dvv_metadata.py",
+  "to": "archive/plots_oneoff/scripts/plot_dvv_metadata.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_dvv_perfamily_deseason.py",
+  "to": "archive/plots_oneoff/scripts/plot_dvv_perfamily_deseason.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_family_map.py",
+  "to": "archive/plots_oneoff/scripts/plot_family_map.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_gnw_coverage_compare.py",
+  "to": "archive/legacy_gnw/scripts/plot_gnw_coverage_compare.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_gnw_family_map.py",
+  "to": "archive/legacy_gnw/scripts/plot_gnw_family_map.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_long_window_stack.py",
+  "to": "archive/plots_oneoff/scripts/plot_long_window_stack.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_mirror_corrected_dvv.py",
+  "to": "archive/plots_oneoff/scripts/plot_mirror_corrected_dvv.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_nonborehole_path_map.py",
+  "to": "archive/plots_oneoff/scripts/plot_nonborehole_path_map.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_one_family_stack.py",
+  "to": "archive/plots_oneoff/scripts/plot_one_family_stack.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_p70_1017_families.py",
+  "to": "archive/plots_oneoff/scripts/plot_p70_1017_families.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_p70_1017_m3_p80.py",
+  "to": "archive/plots_oneoff/scripts/plot_p70_1017_m3_p80.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_p70_1017_m3_p90.py",
+  "to": "archive/plots_oneoff/scripts/plot_p70_1017_m3_p90.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_p70_1017_p80.py",
+  "to": "archive/plots_oneoff/scripts/plot_p70_1017_p80.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_p70_1026_m3_p90.py",
+  "to": "archive/plots_oneoff/scripts/plot_p70_1026_m3_p90.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_p70_609_families.py",
+  "to": "archive/legacy_gnw/scripts/plot_p70_609_families.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_p70_m4_families.py",
+  "to": "archive/plots_oneoff/scripts/plot_p70_m4_families.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/plot_pb_path_map.py",
+  "to": "archive/plots_oneoff/scripts/plot_pb_path_map.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_selection_map.py",
+  "to": "archive/plots_oneoff/scripts/plot_selection_map.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/plot_station_box.py",
+  "to": "archive/plots_oneoff/scripts/plot_station_box.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/process_wave.sh",
+  "to": "archive/oneoff_drivers/scripts/process_wave.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/purity_h_asym_b926.py",
+  "to": "archive/experiments/scripts/purity_h_asym_b926.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/purity_h_decisive_b926.py",
+  "to": "archive/experiments/scripts/purity_h_decisive_b926.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/purity_h_guards_b926.py",
+  "to": "archive/experiments/scripts/purity_h_guards_b926.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/purity_h_test_b926.py",
+  "to": "archive/experiments/scripts/purity_h_test_b926.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/replot_gated_dvv.py",
+  "to": "archive/plots_oneoff/scripts/replot_gated_dvv.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/rerun_b004.sh",
+  "to": "archive/oneoff_drivers/scripts/rerun_b004.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/rev_dvv_control.py",
+  "to": "archive/experiments/scripts/rev_dvv_control.py",
+  "tracked": false
+ },
+ {
+  "from": "scripts/rolling_wave.sh",
+  "to": "archive/oneoff_drivers/scripts/rolling_wave.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/rollout_queue.sh",
+  "to": "archive/oneoff_drivers/scripts/rollout_queue.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/rollout_queue2.sh",
+  "to": "archive/oneoff_drivers/scripts/rollout_queue2.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_1to3_roll_allstations.sh",
+  "to": "archive/oneoff_drivers/scripts/run_1to3_roll_allstations.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_1to4_roll_allstations.sh",
+  "to": "archive/oneoff_drivers/scripts/run_1to4_roll_allstations.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_2to4_roll_allstations.sh",
+  "to": "archive/oneoff_drivers/scripts/run_2to4_roll_allstations.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_b932_dvv.py",
+  "to": "archive/oneoff_drivers/scripts/run_b932_dvv.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_b933_stage1.py",
+  "to": "archive/oneoff_drivers/scripts/run_b933_stage1.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_batch_boreholes.sh",
+  "to": "archive/oneoff_drivers/scripts/run_batch_boreholes.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/run_batch_conc.sh",
+  "to": "archive/oneoff_drivers/scripts/run_batch_conc.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/run_batch_pipelined.sh",
+  "to": "archive/oneoff_drivers/scripts/run_batch_pipelined.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/run_calT_allstations.sh",
+  "to": "archive/oneoff_drivers/scripts/run_calT_allstations.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_cal_allstations.sh",
+  "to": "archive/oneoff_drivers/scripts/run_cal_allstations.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_gnw_circle.sh",
+  "to": "archive/legacy_gnw/scripts/run_gnw_circle.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_gnw_pipeline.sh",
+  "to": "archive/legacy_gnw/scripts/run_gnw_pipeline.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_gpu_stage2.sh",
+  "to": "archive/oneoff_drivers/scripts/run_gpu_stage2.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_hdw_discovery_safe.sh",
+  "to": "archive/legacy_gnw/scripts/run_hdw_discovery_safe.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_pw_allstations.sh",
+  "to": "archive/oneoff_drivers/scripts/run_pw_allstations.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/run_rev_control.sh",
+  "to": "archive/oneoff_drivers/scripts/run_rev_control.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/run_trust_battery.sh",
+  "to": "archive/oneoff_drivers/scripts/run_trust_battery.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/scan_new_days_all51.py",
+  "to": "archive/legacy_gnw/scripts/scan_new_days_all51.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/scan_strict_templates.py",
+  "to": "archive/legacy_gnw/scripts/scan_strict_templates.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/select_coverage_families.py",
+  "to": "archive/superseded_or_support/scripts/select_coverage_families.py",
+  "tracked": true
+ },
+ {
+  "from": "scripts/shb_era2.sh",
+  "to": "archive/oneoff_drivers/scripts/shb_era2.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/supervise_29.sh",
+  "to": "archive/oneoff_drivers/scripts/supervise_29.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/test_kept_stations_shallow.sh",
+  "to": "archive/experiments/scripts/test_kept_stations_shallow.sh",
+  "tracked": true
+ },
+ {
+  "from": "scripts/tier2_list.sh",
+  "to": "archive/oneoff_drivers/scripts/tier2_list.sh",
+  "tracked": false
+ },
+ {
+  "from": "scripts/validate_residual.py",
+  "to": "archive/experiments/scripts/validate_residual.py",
+  "tracked": false
+ }
+]

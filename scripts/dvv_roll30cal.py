@@ -16,7 +16,7 @@ sys.path.insert(0, "src")
 from tremorferometry.dvv import stretch_dvv  # noqa: E402
 
 _C = {}
-def _init(t, fs, w1, w2, days, minst, mindays, neps, anchor=False, t_s=1.0):
+def _init(t, fs, w1, w2, days, minst, mindays, neps, anchor=False, t_s=1.0, eps_max=0.02):
     # anchor=True: stretch about the PINNED DIRECT-S (the matched-filter alignment fixed point),
     # empirically at t_s=+1.0 s (envelope peak; confirmed by dt-vs-lapse). NOT t=0 (= the detection
     # time, 1 s before the S) and NOT sample 0 (t[0]=-3 s). Anchoring at the S gives dv/v = -eps directly
@@ -26,7 +26,7 @@ def _init(t, fs, w1, w2, days, minst, mindays, neps, anchor=False, t_s=1.0):
     tmin = (w1 - t_s if anchor else w1 - t[0])
     tmax = (w2 - t_s if anchor else w2 - t[0])
     _C.update(t=t, fs=fs, tmin=tmin, tmax=tmax, days=int(days), minst=int(minst),
-              mindays=int(mindays), neps=int(neps), prenoise=(t < -1.0), i0=i0)
+              mindays=int(mindays), neps=int(neps), prenoise=(t < -1.0), i0=i0, eps_max=float(eps_max))
 
 def _family(arg):
     patch, S, dstr = arg
@@ -55,7 +55,7 @@ def _family(arg):
     rows = []
     for i in range(ne):
         try:
-            r = stretch_dvv(ref[i0:], Rf[i, i0:], fs=_C["fs"], t_min=_C["tmin"], t_max=_C["tmax"], eps_max=0.02, n_eps=_C["neps"])
+            r = stretch_dvv(ref[i0:], Rf[i, i0:], fs=_C["fs"], t_min=_C["tmin"], t_max=_C["tmax"], eps_max=_C["eps_max"], n_eps=_C["neps"])
             rows.append((patch, Dr[i], float(r.dvv), float(r.cc_max), int(ck[i])))
         except Exception:
             pass
@@ -67,6 +67,11 @@ def main():
     p.add_argument("--window", nargs=2, type=float, default=[2.0, 4.0])
     p.add_argument("--days", type=int, default=30); p.add_argument("--min-stacks", type=int, default=5)
     p.add_argument("--mindays", type=int, default=60); p.add_argument("--n-eps", type=int, default=201)
+    p.add_argument("--eps-max", type=float, default=0.02, help="stretch search half-range (dv/v). Raise to un-clip; scale --n-eps to keep step (0.02/201 = 0.02%%).")
+    p.add_argument("--cert-csv", default=None,
+                   help="optional <stem>_causality_cert.csv: measure ONLY causality-certified families. Each family "
+                        "is measured independently (own 30-day stacks, own SVD-Wiener, own ref=mean) so restricting "
+                        "the set leaves the kept families bit-identical -- it only skips work nothing downstream uses.")
     p.add_argument("--workers", type=int, default=28); p.add_argument("--out", required=True)
     p.add_argument("--origin-anchor", action="store_true",
                    help="stretch about the LFE origin (t=0), not sample 0 — true-scale dv/v (~2.3x larger in 2-4 s)")
@@ -77,13 +82,21 @@ def main():
     t = d["t"]; fs = float(d["fs"]); stacks = d["stacks"]; pat = d["patches"].astype(str)
     dates = pd.to_datetime(d["dates"]).strftime("%Y-%m-%d").values
     uniq = pd.unique(pat)
-    print(f"[{args.station}] {len(stacks)} daily stacks, {len(uniq)} families; window {args.window[0]}-{args.window[1]}s, "
+    n_all = len(uniq)
+    if args.cert_csv:
+        c = pd.read_csv(args.cert_csv)
+        keep = set(c[c.reliable].fam) if "reliable" in c.columns else set(c[c.ratio > 1.5].fam)
+        uniq = np.array([f for f in uniq if f in keep])
+        if not len(uniq):
+            print(f"[{args.station}] no certified families in {args.cert_csv} -> nothing to do", flush=True); return
+    print(f"[{args.station}] {len(stacks)} daily stacks, {len(uniq)}"
+          f"{f'/{n_all} certified' if args.cert_csv else ''} families; window {args.window[0]}-{args.window[1]}s, "
           f"{args.days}-cal-day trailing, min {args.min_stacks} stacks", flush=True)
     tasks = [(fam, stacks[pat == fam], dates[pat == fam]) for fam in uniq]
     ctx = mp.get_context("spawn"); out = []
     with ProcessPoolExecutor(max_workers=args.workers, mp_context=ctx, initializer=_init,
                              initargs=(t, fs, args.window[0], args.window[1], args.days, args.min_stacks,
-                                       args.mindays, args.n_eps, args.origin_anchor)) as ex:
+                                       args.mindays, args.n_eps, args.origin_anchor, 1.0, args.eps_max)) as ex:
         futs = [ex.submit(_family, tk) for tk in tasks]
         for f in as_completed(futs):
             out.extend(f.result())

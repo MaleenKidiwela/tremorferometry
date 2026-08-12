@@ -1,203 +1,141 @@
 # tremorferometry
 
-LFE coda-wave interferometry for dv/v across Cascadia ETS events.
+**LFE coda-wave interferometry for 4-D shear-velocity change (δβ/β) on the Cascadia plate interface.**
 
-## Idea
+Low-Frequency Earthquake (LFE) families are used as *repeating sources* for coda-wave interferometry.
+Because LFEs sit on the megathrust / transition zone, the dv/v sensitivity kernel is biased toward the
+slipping patch — the opposite of ambient-noise dv/v, which is dominated by the shallow crust. The novel
+axis is **depth**.
 
-Use Low-Frequency Earthquake (LFE) families as **repeating sources** for
-coda-wave interferometry, and track temporal velocity changes (dv/v) at the
-plate interface across ETS cycles. LFEs sit on the megathrust / transition
-zone, so the dv/v sensitivity kernel is biased toward the slipping patch —
-distinct from ambient-noise dv/v, which is dominated by shallow crust.
+---
 
-## v1 results (S. V.I., 2010-2013 ETS cycles)
+## Network
 
-**Two independent methods, consistent null.**
+| tier | stations | certified families |
+|---|---|---|
+| PB boreholes | 30 | 2,095 |
+| broadband fleet | 124 INCLUDE / 55 FLAG (178 processed) | 10,608 (with anchors) |
+| anchors (PGC, SHB, CLRS) | 3 | — |
+| **total** | **187** | **12,703** |
 
-**Method A — tremor-windowed inter-station CC** (Phase E.6):
-    dv/v = +0.0003 +/- 0.0075 %  (within the 2010-08 ETS)
-    2-sigma upper bound: |dv/v| < 0.015 %
+Span 39.7–50.4°N, 2009–2026, everything processed at 40 Hz. A family is *causality-certified* when
+`RMS(coda 2–4 s) / RMS(pre-arrival mirror −2..0 s) > 1.5`. Frozen station-inclusion gate:
+**≥20 certified families AND ≥15% survival** (certified ÷ densified).
 
-**Method B — repeating LFE coda-wave interferometry** (Phase E.7e-h, the
-breakthrough): proper Shelly-Beroza-style network autocorrelation discovered
-**16 cross-year LFE families** at southern V.I. (CC ≥ 0.7 at PGC + LZB),
-with members spanning **2005–2013** (up to 8-year baselines). Multi-seed
-matched-filter then grew the catalog to **~17,000 LFE detections across 4 ETS
-cycles**.
+Validated two independent ways: borehole↔co-located broadband (B011↔PGC, per-family p=0.0005) and the
+no-borehole discovery path (CLRS, +120 s shift-null) — the latter is what licenses the fleet.
 
-**Each (family, station) pair is a specific physical path** — source patch
-on the plate interface → station at surface. Stretching per-family
-year-stacks against 2010 reference (high-CC paths with mean CC > 0.85):
+---
 
-| Path | mean dv/v vs 2010 | std across years |
-|------|------------------:|-----------------:|
-| **fam2-PGC** | **−0.97 %** | **0.22 %** |
-| fam0-PGC    | +0.36 % | 0.51 % |
-| fam10-PGC   | −0.38 % | 0.52 % |
-| fam14-PGC   | +0.15 % | 0.32 % |
-| (more in figures/smoke_per_path_dvv_clean.png) | | |
+## The finalized pipeline
 
-**Per-path interpretation:** most paths are stable across 2010–2013 within
-the ~0.3-0.5% per-measurement noise floor, but at least one path
-(fam2 → PGC) shows a **persistent ~−1% velocity decrease** across all of
-2011, 2012, 2013 with std only 0.22%. That's a real path-specific signal
-hidden by network-wide averaging — the aggregate is consistent with zero
-because positive and negative per-path offsets cancel.
+Per station, driven by `scripts/fleet_station.sh`:
 
-**Bottom line:** the southern V.I. plate interface shows mostly stable
-inter-ETS velocity (sub-0.5%), but at least one source-receiver path has
-sustained ~−1% velocity change vs the 2010 ETS. Detailed per-path
-mapping is the right next step.
+| # | stage | script | output |
+|---|---|---|---|
+| 1 | download | `scripts/download_broadband.py` / `download_station.py` | day files (resumable) |
+| 2 | band pick | `scripts/pick_band.py` | one vertical high-gain band (2nd SEED char `H`) |
+| 3 | detect | `scripts/discover_nllb_pnsn_driven.py` | PNSN-tremor-driven candidates |
+| 4 | score | `lfe_features/score_candidates.py --target-fs 40` | P(LFE) per candidate |
+| 5 | threshold | `scripts/adaptive_cand_threshold.py` | rank-based top-30k |
+| 6 | cluster | `scripts/discover_gpu.py` (GPU, cc≥0.80, `--min-years 1`) | matched-filter families |
+| 7 | select | `scripts/select_families_coverage.py 'snr'` | ≤300 densify budget, by SNR |
+| 8 | densify | `scripts/densify_gnw_gpu.py` (forward only, 2–8 Hz) | detections |
+| 9 | daily stacks | `scripts/build_long_window_3comp.py` (≥20 det/day) | `long_window_daily_<STA>_Z.npz` |
+| 10 | **dv/v** | `scripts/dvv_roll30cal.py` | `daily_dvv_<STA>_Z_2to4*.csv` |
+| 11 | certify | `scripts/finalize_causality.py` | `<stem>_causality_cert.csv` |
 
-### The path (LFE-CWI eventually worked — with the right methodology)
+**dv/v measurement (stage 10).** 30-calendar-day *trailing* rolling stack → peak-normalize → SVD-Wiener
+filter → stretch the **2–4 s** coda against a per-family **all-time reference** (`ref = Rf.mean(0)`),
+origin-anchored. The 2–4 s window is load-bearing: 1–4 s dilutes the stretch ~50× toward zero because the
+pinned direct-S dominates the window energy. Never take a median dv/v.
 
-The first LFE-CWI attempt (using Lin's catalog binned at 0.1°) **failed**
-because at that clustering grain, detections within a "family" are NOT
-waveform-repeating sources. The early Phase A–D numbers were stretching
-on source-mixture variation, not medium change.
+`--cert-csv` restricts the measurement to causality-certified families. Family measurement is fully
+independent (own stacks, own SVD, own reference), so this is bit-identical for the kept families and
+skips ~77% of wasted work.
 
-The pivot to **tremor-windowed inter-station CC** (Method A above) gave
-the first clean null bound — does not require repeating sources, biases
-sensitivity to the megathrust depth via the tremor source field.
-
-Then the proper LFE-CWI was rescued (Method B) with the Shelly-Beroza
-recipe in `src/tremorferometry/repeater.py`:
-1. Envelope-peak alignment (don't trust Lin's OT — find the direct phase).
-2. Tight 2-sec window (not 6 s of band-limited noise).
-3. Network CC at PGC + LZB with shift allowance.
-4. Strict threshold CC ≥ 0.7.
-5. Hotspot focus.
-
-Result: 16 cross-year families found in seed analysis; matched-filter then
-grew them to ~17,000 detections. See `notes/METHODS.md` § Phase E for the
-full arc.
-
-### Margin-wide and 2026 extension
-
-The pipeline is region-agnostic. To extend everywhere in Cascadia / to 2026:
-
-- **Southern V.I.** (have): use Lin (2023) catalog.
-- **Olympic / SW Washington**: Sweet et al. (2019) catalog (9 LFE families).
-- **N California**: Plourde (2015) and Ducellier (2022).
-- **Central Oregon gap** and **2014-onward** beyond Lin's coverage: use
-  `src/tremorferometry/detect.py` (envelope peaks inside PNSN tremor
-  windows) to seed `repeater.py` on continuous data. PNSN tremor catalog
-  covers all of Cascadia continuously through 2026.
-
-### Figures
-
-- `figures/smoke_tremor_cc_dvv_v2.png` — main result (aggregate dv/v vs time with LFE-rate panel)
-- `figures/smoke_tremor_cc_per_pair_distance.png` — per-pair robustness
-- `figures/smoke_tremor_cc_preprocess_compare.png` — preprocessing tradeoff
-- `figures/smoke_family_similarity.png`, `figures/smoke_reclust_L0000_PGC.png` —
-  diagnostics that walked back the LFE-CWI approach
-
-## Catalogs
-
-- **PNSN tremor catalog** (Wech envelope-correlation method;
-  `https://tremorapi.pnsn.org/api/v3.0/events`) — used to identify and time
-  ETS episodes. Implementation: `src/tremorferometry/pnsn.py` and
-  `scripts/00b_fetch_pnsn_tremor.py`.
-- **Lin (2023) LFE catalog** (Zenodo `10.5281/ZENODO.10016020`) — 1.05 M LFE
-  detection times + locations for southern Vancouver Island 2005–2017.
-  Ingest: `src/tremorferometry/lin_catalog.py` and
-  `scripts/02b_ingest_lin_catalog.py`. We cluster Lin's per-event records
-  into 217 "proto-families" by 0.1° grid binning (limitation: see
-  per-family analysis section in METHODS).
-
-## Pipeline
+### The joint 4-D inversion
 
 ```
-00b PNSN API         -> tremor CSV
-01  tremor CSV       -> episode (t_start, t_end, bbox)
-02b Lin Zenodo CSV   -> families + detection-times parquet
-04  FDSN             -> per-day MSEED waveform cache (parallel ThreadPool)
-06  detections + MSEED -> per-family HDF5 stacks
-                          (flat (family, station) ProcessPool)
-07  stacks + ref     -> dv/v(t) parquet via stretching
-09  dv/v parquet     -> aggregate figure + QC
-
-Optional / for time periods outside Lin's coverage:
-05  templates + data -> EQcorrscan + fast-matched-filter (GPU) detections
+assemble_res_catalog.py   →  pairs.csv, cells.csv, pair_months.parquet   (the finalized dv/v tensor)
+build_G_captured.py       →  G.npz          capture-weighted single-scatter operator
+build_era_table.py        →  era_table.csv  instrument/response eras
+invert_dvv_4d.py          →  inversion_4d.npz
+plot_4d_interface_maps.py →  DEEP    (interface δβ/β, from MODEL)
+plot_4d_surface_maps.py   →  SHALLOW (near-receiver field, from SITES)
 ```
 
-Scripts under `scripts/` are numbered and idempotent; each takes `--config`.
+One system solves the interface model **and** per-station site terms jointly:
 
-## Repo layout
+    m = argmin ‖W(d − [Gc S]m)‖² + λ_f²‖Lm‖² + λ_s²‖m_site‖²
+
+`inversion_4d.npz` carries both halves — `MODEL` (n_windows × n_cells, the deep interface) and `SITES`
+(n_windows × n_stations, the shallow near-receiver field) — plus the gate statistics (`idx`, `null_idx`,
+`idx_pctile`, `VR`, `closure_*`, `mda_model`, `bound_vals`).
+
+Grids: `res_catalog_g20` (0.2°, 293 cells) and `res_catalog_g40` (0.4°, 101 cells), both 189 stations,
+2009-01 → 2026-07. Cells are represented by their **LFE family centroid**, not the geometric grid centre.
+
+---
+
+## Layout
 
 ```
-configs/        # one YAML per ETS episode
-catalogs/       # ingested catalog tables (gitignored, reproducible)
-scripts/        # numbered thin CLIs
-src/tremorferometry/  # the package
-tests/          # pytest, 12 tests passing
-notes/          # METHODS.md and other write-ups
-data/           # gitignored; waveforms, detections, stacks, dvv
-figures/        # tracked smoke + result figures
+scripts/                        the 11-stage pipeline + drivers + infra watchdogs
+fault_tomography/inversion/     the 6 scripts of the joint 4-D inversion
+  res_catalog_g20/  g40/        assembled tensors, operators, results, figures
+lfe_features/                   score_candidates.py (the LFE picker)
+src/tremorferometry/            the library (stretch_dvv, matched filter, io, qc)
+notes/                          methodology, resume notes, the adversarial audit ledger
+archive/                        223 superseded / exploratory / one-off scripts (nothing deleted)
 ```
 
-## Install
+`archive/MOVES.json` records every move. Start with `notes/METHODOLOGY_END_OF_RUN_2026-07-21.md`
+(methods + coverage) and `notes/POST_DVV_ANALYSIS_2026-07-21.md` (the audit trail).
 
-A dedicated conda env at `/home/jovyan/envs/tremorferometry` has the full
-stack installed (obspy, eqcorrscan, fast-matched-filter built against
-CUDA 12.4, plus this package in editable mode). Activate with
+---
 
-```bash
-mamba activate /home/jovyan/envs/tremorferometry
-```
+## What is and isn't in git
 
-To recreate from scratch on another host:
+Versioned: all code, the **assembled inversion tensors and results** (`res_catalog*/`), the 191
+causality-cert files, and the small shared inputs (slab geometry, station rosters). ~40 MB — enough to
+reproduce **both inversions from a clone**.
 
-```bash
-mamba create -p /path/to/env -c conda-forge python=3.11 \
-  numpy scipy pandas matplotlib h5py pyarrow pyyaml \
-  obspy eqcorrscan joblib tqdm pytest
-mamba activate /path/to/env
+Not versioned (regenerable, far past GitHub's limits):
 
-# fast-matched-filter (GPU template matching, needs nvcc on PATH; optional
-# for v1 since we use Lin's detection times directly).
-pip install --no-build-isolation \
-  "git+https://github.com/beridel/fast_matched_filter.git"
-FMF=$(python -c "import fast_matched_filter, os; print(os.path.dirname(fast_matched_filter.__file__))")
-mkdir -p $FMF/lib && cd $FMF/src
-gcc -O3 -fopenmp -fPIC -march=native -shared matched_filter.c \
-    -o $FMF/lib/matched_filter_CPU.so
-nvcc -O3 -Xcompiler "-fPIC -fopenmp" -shared matched_filter.cu \
-     -o $FMF/lib/matched_filter_GPU.so
+| product | size |
+|---|---|
+| daily stacks `long_window_daily_*.npz` | 283 GB |
+| per-family daily dv/v CSVs | 7.8 GB (17 files >100 MB) |
+| `figures/borehole_dvv_map.html` | 176 MB |
+| `catalogs/pnsn_tremor_cascadia_full.csv` | 55 MB — **required by `invert_dvv_4d.py`**, re-fetch from the PNSN API |
 
-pip install --no-deps --no-build-isolation -e .
-```
+---
 
-## Reproduce v1 end-to-end
+## Results
 
-```bash
-mkdir -p data/raw_lfe
-curl -fsSL -o data/raw_lfe/lin2023_lfe.csv \
-    'https://zenodo.org/records/10016020/files/EQloc_001_0.1_3_S.csv?download=1'
+**Resolution (signed off).** Network *geometry* resolves the deep interface down to the 44 km cell scale
+noise-free — there is no geometric obstruction; the limit is SNR. At measurement noise the finest resolved
+scale is ~70 km (recent), sharpened from ~180 km as the fleet grew. Deep-index precision improved
+0.64% → 0.12% and above-noise deep modes ~3 → ~24. The 3-D **volume** checkerboard reproduces ~0.85 at
+250 km; only the older 2-D *interface* 0.77 is retired (a thin interface captures a median ~5% of the
+volumetric coda sensitivity, so unit-sum kernels inflated it ~12×).
 
-python scripts/02b_ingest_lin_catalog.py --config configs/ets_2010_vi.yaml \
-    --raw data/raw_lfe/lin2023_lfe.csv
+**Inversion (preliminary — not signed off).** The deep megathrust is **velocity-stable within resolution**
+— a null-gated, spatially-resolved *bound*, not a detection. A planted ~1% coherent deep patch is
+recovered at +0.89% (correct sign), so this is a genuine bound rather than a coverage failure. The ETS
+composite is sign-correct and leave-one-station-out robust but sub-threshold (p≈0.055 against a
+pre-registered p<0.01).
 
-python scripts/04_fetch_waveforms.py --config configs/ets_2010_vi.yaml --workers 24
+Both results come from an adversarial review loop (fix → re-run → re-audit) that has so far caught a sign
+flip, a rigged null, a λ transplant, a baseline-drift bug, and an instrument-era contamination path.
 
-python scripts/06_stack_bins.py --config configs/ets_2010_vi.yaml \
-    --detections data/detections_lin_ets_2010_vi.parquet \
-    --selected catalogs/lin_families_ets_2010_vi.csv \
-    --waveforms data/waveforms --out data/stacks --workers 48 \
-    --fs 40 --pre-s 5 --post-s 35
+### Known issues
 
-python scripts/07_measure_dvv.py --config configs/ets_2010_vi.yaml \
-    --stacks data/stacks --out data/dvv/v1.parquet --workers 16 --fs 40
-
-python scripts/09_aggregate_plot.py --config configs/ets_2010_vi.yaml \
-    --dvv data/dvv/v1.parquet \
-    --detections data/detections_lin_ets_2010_vi.parquet \
-    --out figures/v1.png
-```
-
-## Status
-
-v1 complete: end-to-end pipeline on real 2010-08 V.I. ETS data, multi-station,
-multi-family, with QC checks. The remaining open work (waveform-similarity
-family reclustering, frequency-band split, margin-wide extension to other LFE
-catalogs) is captured in `notes/METHODS.md` § 6.
+- **Search-range clipping.** dv/v was measured with `eps_max=0.02`, so any true |dv/v| > 2% returned
+  *exactly* 2%. Fleet-wide this affects 1.8% of inversion input, but it is concentrated (NEMA 37%, B036
+  31%, B035 29%). Ten stations have been re-measured at a uniform `eps_max=0.05` (`scripts/rerun_unif05.sh`,
+  `*_unif05.csv`); **the inversions on disk still use the clipped input.** Whether the freed 2.4–3.0%
+  values are real or cycle-skips is unresolved — the discriminator is lapse-proportionality.
+- **Mirror v2.** A fleet-wide mirror-corrected pass would cut the noise floor ~65%. Since geometry already
+  resolves 44 km, that buys resolution directly. It is the single biggest lever and is not yet run.

@@ -1,0 +1,8 @@
+# Count-short / survival-OK near-misses: <20 certified BUT survival >=15% (the MIRROR of tier-2, which is
+# count-OK/survival-short in data/tier2_survival_borderline.txt). These stations' certified families ARE
+# causality-passed = reliable dv/v — they just miss the frozen count bar, usually family-supply-limited
+# (few families clustered, not a quality problem). Candidates for inversion inclusion at end-of-run, same
+# evidence-based logic the user set for tier-2 (keep flagged-but-completed, decide inclusion later).
+# Format: STA  certified/densified  survival%  note
+TRIPT   17/84   20%   family-supply-limited (only 84 clustered)
+CRBN    14/60   23%   family-supply-limited (only 60 clustered); CC non-PR

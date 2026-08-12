@@ -8,7 +8,16 @@ __pycache__/
 venv/
 
 # Data / outputs
-data/
+# NOTE: git cannot re-include a file whose PARENT DIR is excluded, so this must be `data/*`
+# (not `data/`) for the negations below to take effect.
+data/*
+# small, non-reproducible-without-the-fleet inputs that the joint 4-D inversion needs:
+!data/*_causality_cert.csv
+!data/broadband_fleet_order.csv
+!data/candidate_stations_post2020.csv
+!data/cas_slab2_input_04-18.csv
+!data/station_slab2_depth.csv
+!data/*.txt
 # LFE-feature side-exploration: ship code+docs+figures, not the large reproducible products
 lfe_features/data/
 lfe_features/models/
@@ -36,6 +45,26 @@ fault_tomography/inversion/*.npz
 # don't ship the data, just the code that fetches it.
 catalogs/*.csv
 catalogs/*.parquet
+# NOTE: gitignore has NO trailing comments -- a `# ...` after a pattern becomes part of the
+# pattern and silently matches nothing.
+# pnsn_tremor_cascadia_full.csv (55 MB) is REQUIRED by invert_dvv_4d.py (ETS phase split) but is
+# deliberately NOT shipped: too large, and re-fetchable from the PNSN API. Fetch it before
+# re-running the inversion.
+
+# nested git repo (cloned paper source) -- would commit as a broken gitlink/submodule
+catalogs/ducellier_catalog/
+
+# The ASSEMBLED inversion products ARE the reproduction set: finalized dv/v tensor
+# (pair_months.parquet), the forward operator (G.npz) and the joint-inversion result
+# (inversion_4d.npz). Small (tens of MB). Must come AFTER the *.npz / *.parquet rules above.
+!fault_tomography/inversion/res_catalog*/**
+fault_tomography/inversion/res_catalog*/**/*.mp4
+fault_tomography/inversion/res_catalog*/**/*.gif
+fault_tomography/inversion/res_catalog*/.ipynb_checkpoints/
+
+# scratch notebooks
+Untitled.ipynb
+.ipynb_checkpoints/
 
 # OS / editor
 .DS_Store

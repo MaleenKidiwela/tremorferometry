@@ -99,7 +99,9 @@ def main():
     rng = np.random.RandomState(42)
 
     print(f'[{a.sta}] loading detections...', flush=True)
-    m = pd.read_csv(a.mf or f'data/mf_{s}_all.csv', usecols=['template','time'])
+    _mfp = a.mf or f'data/mf_{s}_all.csv'
+    _mff = sorted(glob.glob(_mfp)) if any(c in _mfp for c in '*?[') else [_mfp]
+    m = pd.concat([pd.read_csv(f, usecols=['template','time']) for f in _mff], ignore_index=True)
     m['t'] = pd.to_datetime(m.time)
     jobs = []
     for fam, g in m.groupby('template'):

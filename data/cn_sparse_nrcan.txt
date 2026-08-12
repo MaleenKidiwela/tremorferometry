@@ -1,0 +1,6 @@
+# CN stations IRIS holds too sparsely to process — end-of-run NRCan (NRCan/Natural Resources Canada FDSN) retry.
+# NOT a systematic CN-provider problem: most CN is fully served at IRIS (TOFB/CBB/SNB/MGRB/TXDB all strong INCLUDE).
+# These are individual sparse stations. Format: NET STA  reason
+CN MYRA  IRIS holds ~161 of ~2900 days -> 6 families (<50) FLAG
+CN SHPB  IRIS holds 48 of 6421 day-files -> 0 candidates FLAG
+CN BOIB  IRIS holds 49 of 6421 day-files -> 0 candidates FLAG

@@ -16,7 +16,7 @@ HERE = os.path.dirname(__file__); PRE, POST = 10.0, 30.0
 
 
 def cut_day(payload):
-    net, sta, year, julday, items, cols = payload      # items: (idx, epoch)
+    net, sta, year, julday, items, cols, target_fs = payload      # items: (idx, epoch)
     from obspy import read, UTCDateTime
     path = f"data/waveforms/{net}.{sta}/{year}/{julday:03d}.mseed"
     if not os.path.exists(path):
@@ -25,6 +25,20 @@ def cut_day(payload):
         st = read(path)
     except Exception:
         return []
+    # decimate the full day to target_fs BEFORE slicing so features match the picker's training fs (40 Hz for
+    # the broadband picker; native 100 Hz HHZ would give a different Nyquist -> wrong spectral features).
+    if target_fs:
+        from fractions import Fraction
+        from scipy.signal import resample_poly
+        for tr in st:
+            nat = float(tr.stats.sampling_rate)
+            if abs(nat - target_fs) > 1e-6:
+                fr = Fraction(int(round(target_fs)), int(round(nat))).limit_denominator(1000)
+                try:
+                    tr.data = resample_poly(tr.data.astype(np.float64), fr.numerator, fr.denominator).astype(np.float32)
+                    tr.stats.sampling_rate = target_fs
+                except Exception:
+                    pass
 
     def get(*ch):
         for c in ch:
@@ -71,6 +85,8 @@ def main():
     ap.add_argument("--net", required=True); ap.add_argument("--sta", required=True)
     ap.add_argument("--cand", required=True); ap.add_argument("--y0", type=int, default=2010); ap.add_argument("--y1", type=int, default=2013)
     ap.add_argument("--thr", type=float, default=0.4); ap.add_argument("--workers", type=int, default=14)
+    ap.add_argument("--target-fs", type=float, default=None, help="resample each day to this fs before feature "
+                    "extraction (set 40 for the broadband picker; omit to keep native, e.g. boreholes)")
     a = ap.parse_args(); s = a.sta.lower()
     B = joblib.load(f"{HERE}/models/tremor_picker_{s}.joblib")
     model, scaler, cols, classes = B["model"], B["scaler"], B["cols"], B["classes"]
@@ -84,7 +100,7 @@ def main():
     jobs = defaultdict(list)
     for i, r in enumerate(c.itertuples(index=False)):
         jobs[(int(r.yr), int(r.jd))].append((i, float(r.epoch)))
-    payloads = [(a.net, a.sta, k[0], k[1], v, cols) for k, v in jobs.items()]
+    payloads = [(a.net, a.sta, k[0], k[1], v, cols, a.target_fs) for k, v in jobs.items()]
     idxs = []; feats = []; done = 0
     with ProcessPoolExecutor(max_workers=a.workers) as ex:
         for f in as_completed([ex.submit(cut_day, p) for p in payloads]):

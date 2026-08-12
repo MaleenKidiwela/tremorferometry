@@ -1,0 +1,8 @@
+{
+  "stations": 189,
+  "pairs": 3607,
+  "cells": 293,
+  "sites": 174,
+  "cc_min": 0.7,
+  "cell_deg": 0.2
+}

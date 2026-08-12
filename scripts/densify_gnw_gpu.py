@@ -176,11 +176,10 @@ def main():
     # the cupy pool -> bounded GPU memory (~4 GB). (Variable N from gappy days cached a 0.73 GB
     # Tk per distinct length and OOM'd the 46 GB GPU.)
     import scipy.fft as _sf
-    N_FIX = 3_456_016                 # >= any full day (40Hz day=3,456,000; 100->40=3,456,001)
+    N_FIX = int(round(args.fs)) * 86400 + 16   # FULL day at fs (was hardcoded 40Hz -> truncated 100Hz days to 9.6h)
     valid_fix = N_FIX - m + 1
     N = _sf.next_fast_len(N_FIX + m - 1)
-    Tk = cp.fft.rfft(Tn_g, n=N, axis=1).astype(cp.complex64)
-    print(f"[gpu] N_FIX={N_FIX:,} N={N:,}, Tk resident {Tk.nbytes/1e9:.2f} GB", flush=True)
+    print(f"[gpu] N_FIX={N_FIX:,} N={N:,}, {Tn_g.shape[0]} templates (Tk recomputed per batch)", flush=True)
 
     thr = np.float32(args.threshold)
     n_gap = max(1, int(round(args.min_gap_s * args.fs)))
@@ -199,21 +198,30 @@ def main():
         else:
             dg = cp.zeros(N_FIX, dtype=cp.float32); dg[:n_real] = cp.asarray(data)
         D = cp.fft.rfft(dg, n=N).astype(cp.complex64)
-        conv = cp.fft.irfft(D[None, :] * Tk, n=N, axis=1)[:, m - 1:m - 1 + valid_fix]
-        # GPU sliding norm (float64 cumsum for accuracy, cast result to f32 to halve mem)
+        # GPU sliding norm (float64 cumsum for accuracy, cast result to f32 to halve mem) — day-level
         x = dg.astype(cp.float64)
         c1 = cp.concatenate((cp.zeros(1), cp.cumsum(x))); wm = (c1[m:] - c1[:-m]) / m
         c2 = cp.concatenate((cp.zeros(1), cp.cumsum(x * x)))
         ws = cp.sqrt(cp.maximum((c2[m:] - c2[:-m]) - m * wm * wm, 1e-12)).astype(cp.float32)
-        cc = conv / ws[None, :]
-        cc = cp.where(cp.isfinite(cc) & (cp.abs(cc) <= 1.0), cc, cp.float32(0.0))
-        # only windows fully inside REAL samples (padding region gives cc~0 anyway)
         real_valid = max(0, n_real - m + 1)
-        mask = cc[:, :real_valid] >= thr
-        ti, si = cp.nonzero(mask)
-        vals = cc[ti, si]
-        out = (cp.asnumpy(ti), cp.asnumpy(si), cp.asnumpy(vals).astype(np.float32))
-        del dg, D, conv, x, c1, c2, ws, cc, mask, ti, si, vals
+        # BATCH templates so peak GPU mem is bounded at full-day N (all-at-once would OOM at fs=100).
+        TB = 128
+        ti_a = []; si_a = []; v_a = []
+        for b0 in range(0, Tn_g.shape[0], TB):
+            Tkb = cp.fft.rfft(Tn_g[b0:b0 + TB], n=N, axis=1).astype(cp.complex64)  # transient, per batch
+            conv = cp.fft.irfft(D[None, :] * Tkb, n=N, axis=1)[:, m - 1:m - 1 + valid_fix]
+            cc = conv / ws[None, :]
+            cc = cp.where(cp.isfinite(cc) & (cp.abs(cc) <= 1.0), cc, cp.float32(0.0))
+            mask = cc[:, :real_valid] >= thr
+            ti, si = cp.nonzero(mask)          # row-major -> ti ascending within batch
+            vals = cc[ti, si]
+            ti_a.append(cp.asnumpy(ti) + b0); si_a.append(cp.asnumpy(si))
+            v_a.append(cp.asnumpy(vals).astype(np.float32))
+            del conv, cc, mask, ti, si, vals, Tkb
+        out = (np.concatenate(ti_a) if ti_a else np.array([], np.int64),
+               np.concatenate(si_a) if si_a else np.array([], np.int64),
+               np.concatenate(v_a) if v_a else np.array([], np.float32))
+        del dg, D, x, c1, c2, ws
         return out
 
     # enumerate by year

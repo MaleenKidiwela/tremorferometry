@@ -1,0 +1,6 @@
+# tier-2 survival-borderline (>=20 certified, <15% survival) -- usable-with-caveat, opt-in later
+BHW	21 certified	7% survival
+KRP	38 certified	13% survival
+BHAM	33 certified	14% survival
+MOGU	21 certified	11% survival
+PIT6	26 certified	9% survival

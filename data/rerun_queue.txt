@@ -1,0 +1,8 @@
+# Stations to re-process after the main batch (each needs re-download since traces were freed):
+# station  reason
+FISH    band-pick bug (ran short BHZ; now picks longer HHZ)
+JCC     NCEDC provider bug (0 candidates from IRIS; now downloads from NCEDC)
+GOBB    borderline <60 guard (56 families, VancIsl high-survival -> may clear >=20; guard now <50)
+SYMB    borderline <60 guard (57 families, VancIsl)
+KMR   accelerometer HN mis-pick (FLAG was on strong-motion data, not seismometer; re-run with HHZ)
+KHMB   accelerometer HN mis-pick (FLAG was on strong-motion data, not seismometer; re-run with HHZ)
