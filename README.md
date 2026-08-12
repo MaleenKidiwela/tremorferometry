@@ -98,8 +98,8 @@ archive/                        223 superseded / exploratory / one-off scripts (
 ## What is and isn't in git
 
 Versioned: all code, the **assembled inversion tensors and results** (`res_catalog*/`), the 191
-causality-cert files, and the small shared inputs (slab geometry, station rosters). ~40 MB — enough to
-reproduce **both inversions from a clone**.
+causality-cert files, the PNSN tremor catalog, and the small shared inputs (slab geometry, station
+rosters). ~95 MB — enough to reproduce **both inversions from a clone, with no external fetch**.
 
 Not versioned (regenerable, far past GitHub's limits):
 
@@ -108,7 +108,10 @@ Not versioned (regenerable, far past GitHub's limits):
 | daily stacks `long_window_daily_*.npz` | 283 GB |
 | per-family daily dv/v CSVs | 7.8 GB (17 files >100 MB) |
 | `figures/borehole_dvv_map.html` | 176 MB |
-| `catalogs/pnsn_tremor_cascadia_full.csv` | 55 MB — **required by `invert_dvv_4d.py`**, re-fetch from the PNSN API |
+
+`catalogs/pnsn_tremor_cascadia_full.csv` (55 MB) *is* shipped — `invert_dvv_4d.py:106` needs it for the
+ETS phase split, so the inversion cannot run without it. It sits above GitHub's 50 MB warning threshold
+but below the 100 MB hard limit.
 
 ---
 
