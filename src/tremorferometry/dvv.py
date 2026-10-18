@@ -9,8 +9,19 @@ To recover dv/v we scan a grid of trial stretches eps, resample the current trac
 onto the reference's time axis assuming that stretch, and pick the eps that
 maximizes correlation with the reference on the coda window.
 
-Convention: a negative dv/v means the medium slowed down, so coda arrivals
-appear later in `cur` than in `ref`.
+WARNING -- WHAT THIS RETURNS (Merlin-audited 2026-08-20). The quantity returned as
+`StretchResult.dvv` is the STRETCH eps = dt/t of the forward model above, which is
+the NEGATIVE of the fractional velocity change:
+
+    eps = dt/t = -(dv/v)
+
+A velocity INCREASE moves coda arrivals toward zero lag and returns a NEGATIVE eps;
+a slowdown returns a POSITIVE eps. Verified by forward test: synthesising a physical
+dv/v of +1.00% and passing it through this function returns -0.99%.
+
+The previous "Convention:" note here claimed the opposite and contradicted the forward
+model six lines above; it is what allowed the sign to propagate unnoticed into the
+CSVs, the interactive map and the 4-D inversion. Consumers must negate exactly ONCE.
 """
 
 from __future__ import annotations

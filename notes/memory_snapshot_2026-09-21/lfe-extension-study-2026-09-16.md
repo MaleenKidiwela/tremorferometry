@@ -1,0 +1,109 @@
+---
+name: lfe-extension-study-2026-09-16
+description: "ACTIVE STUDY (user go 2026-09-16) — extend Bostock's 130 LFE families continuously 2014-2026 on the permanent network by iterated template matching; workspace lfe_extension/; tracks A (method on cached 2010/2012), B (download running), C (production), D (product)"
+metadata: 
+  node_type: memory
+  type: project
+  originSessionId: d6a923e6-f9f1-4ee1-8d37-955b6b2e0f35
+  modified: 2026-09-16T21:00:05.821Z
+---
+
+**2026-09-16 the user chose the route: extend Bostock et al. (2015) (130 families, 2003-2013, S. Vancouver Island) forward to
+2026, CONTINUOUS (not ETS windows only), on long-running stations, Bostock's own way (network template matching + template
+iteration), with our own family locations as a check. No new-family discovery. Workspace `lfe_extension/` (PLAN.md = design,
+bars, tracks; NOTES.md ledger).** Supersedes the picker-first route of [[lfe-catalog-goal-2026-09-10]] for the north.
+
+Why this route: Bostock's 2007-2013 detections used only the permanent ring (PGC, VGZ, SNB, LZB, PFB, YOUB; POLARIS temporaries
+gone by 2007) at ~3.6 MAD after years of template iteration. Our from-scratch 2012 templates (15 stations, 13 in roster) reach
+cc 0.78 to his stacks, 23 % own-family recall at 8 MAD; false alarms = site-coherent noise from co-located borehole clusters
+(fix = site-level merge + site-rolled control; E6 mergeA halves FA). No template iteration was ever run — that is the lever.
+The dv/v families are NOT Bostock families (waveform identity test 2026-09-16: narrow-band 0.43 Hz wavelets, best matches at
+chance spatial consistency) → seeds must be Bostock's families (times in
+`lfe_catalog_repair/results/external/bostock/bostock2015_sloweq_FULL_2003-2013.csv`, P/S in the SeisBench stacks).
+
+Stations: roster PGC, VGZ, SNB(→2021), B001, B003-B007, B009, B010, B011, B926 + off-roster permanents NLLB, LRIV, LZB(→2014),
+YOUB(→2014), PFB(→2018), SOKB(→2015). Data: 2010/2012/2017 ETS on disk (`lfe_catalog_repair/traces`); Track B downloads
+2010 boreholes, 2011 + 2013 ETS, then continuous 2014→2026 (~1.4 TB) into `lfe_extension/traces`, manifest
+`lfe_extension/results/download_manifest.csv`, progress `download_progress.json`.
+
+**How to apply:** orchestrate per [[orchestrate-with-opus-subagents]]; Merlin reviewed PLAN before Track A
+([[use-merlin-for-decisions]]); never wait on the download — Track A runs on cached 2010/2012 data; production (Track C) follows
+the manifest month by month; pre-registered bars in PLAN.md are reported met/not met, never tuned to. Codex corrections apply:
+one-to-one matching, borehole ZNE rotation from StationXML, 183-station roster.
+
+**STATUS 2026-09-17 07:00 UTC — CATALOG v1 DELIVERED:** `lfe_extension/results/trackD/lfe_extension_catalog_v1.parquet` (248,547 rows;
+93,291 strict-tier / 244,815 loose-tier; 115 families; 2014-01..2026-09-15; per-event Mc and false-alarm floor λ; time basis = Bostock
+clock + family offset, not origin time). Tiers per network epoch E0-E3 (T_core 8.75/8.25/8.75/9.25); T_core completeness 12-18 % vs
+Bostock. Bars: completeness model MET, main-front speed MET, re-rupture median = decimation bias. Frozen method: mergeB site merge,
+12-s templates from 2012 event times, HF-ratio veto (PGC 10-19/2-8 Hz), template iteration REJECTED, 2012 templates carry across the
+2017 CNSN sensor swaps, LRIV dropped after 2019-05-30, SOKB no data. Relocation: 3.6 km median vs Bostock (14 families). OPEN: purity-
+matched main-front estimator (only 3/31 SSEs give a speed at cat_core); Track C QC flags; NEXT PHASE = multi-station picker trained on
+our stations (Bostock labels + strict-tier catalog labels; held-out Bostock year as truth). Full write-up results/trackD/RESULTS.md.
+
+**PARKED (user 2026-09-17, "we will come back to it"):** purity-matched main-front estimator v2 — passes all four 2012 referee legs
+(Bostock 16 %, thinned 3 %, our cat_core 7 %, cat_ext 2 %); on 2014-2026 gives 11 significant fronts in 31 SSE windows (5 SE, 6 NW,
+|v| 1.3-8.6 km/day, median 5.5). Files: `lfe_extension/results/trackD/thomas_front_v2*.{csv,json}`, `figures/d3b2_front_v2_summary.png`,
+RESULTS.md §3b-2. Next refinement when resumed: split >25-day multi-episode windows.
+
+**v1.1 (2026-09-17 ~14:00 UTC) SUPERSEDES v1:** `results/trackD/lfe_extension_catalog_v1_1.parquet` — 248,069 rows, 74,330 strict / 244,375
+loose, hp (p_real≥0.8) 14,777; after a cc-floor bug fix (dead-channel edge windows → cc ~1e11; 486 rows removed) and per-epoch tier
+re-derivation (E1/E2 T_core 9.00). p_real from Track E (`results/trackE/realness_v1_1.parquet`, GBM trained 2012 / validated 2010,
+AUC 0.855, calibration bracket p_real / p_real_cons). Inter-ETS strict tier: only ~830 events at 76 % purity (311 at 89 %) are usable.
+Open: seasonal tension (winter excess strengthens on hp events). Gates 0-3 machinery validated in `lfe_picker/results/gates/`
+(Gate 1 power 0.92 at N=100, 1/150 false pass; dv/v families 0/50). Picker oracle: DISCOVERY-ONLY (energy statistic has 0 headroom
+over the template at matched FA); template baseline on 2011/2013 = 0.16/0.20.
+
+**PICKER PHASE (lfe_picker/, 2026-09-17..19) — NEGATIVE RESULT, documented:** learned pickers (Lin re-impl, PhaseNet U-Net) detect LFEs
+as a class (2.7x single-station gain chance-corrected) but carry no location on the permanent network (P2 back-projection CLOSED:
+shuffled moveout keeps 60 % of recall, per-event error 25 km). Template-free repeater discovery (Bostock's own 2012 events as
+candidates, 13 stations) links 0/10 isolated hidden families; pooled 2010+2012 still 0/10 (~30x short; needs ~2,650 events/family
+≈ 10-16 ETS episodes). Far sites dilute; PROXIMITY not count is the limit. Gates 0-3 validated and reusable. Referee: 2011 spent
+for P1b/P2; 2013 sealed. Open routes: Puget/Olympic 2020-2026 (median 30 stations/cell, 1.1 TB) multi-episode search; literature
+seeds by request (Chestler 43, Royer 149, Thomas 18 families); far-south seeds after the O4 existence test. See
+lfe_picker/results/{P0O,P1,P2,P3,GATES}_RESULTS.md and merlin_review_*.md.
+
+**2026-09-19 GEOMETRY BREAKTHROUGH (lfe_picker/results/p3d_puget_geometry/):** four unused NRCan PQ-network broadbands on S. Vancouver
+Island — JRDRB (2021), ALBHB (2022), LHLYB (2023), DAOB (2024) — sit within 45 km of 36-66 Bostock families each. Sites ≤45 km per family
+(median / % with ≥3): S15 1 / 2 % → +PQ4 3 / 72 % vs Bostock's own POLARIS array 5 / 77 %. PQ4 nearly restores his discovery geometry.
+Puget 47.0-47.5N (all networks) median 5 sites ≤45 km. 237 real 3-C seismometers 2019+ in the box, only 80 in the dv/v roster.
+P3D runs with network variants V1 (S15+SYMB/BUCKS) and V2 (+PQ4); delivery of PQ waveforms being probed (IRIS vs NRCan).
+
+**P3D RESULT (2026-09-19):** the close stations do NOT register better than PGC (rho ratio SYMB 0.78, BUCKS 0.30; SYMB stack S-SNR 2.7 dB
+below PGC despite 1.4 km epicentral distance → SITE NOISE dominates; PGC is an exceptionally quiet vault). Discovery prediction
+δ_full 0.57σ vs 1.5σ bar → not licensed; adding the ten stations gives −5 % certified recall (no gain). PQ delivery poor at IRIS
+(JRDRB 87 days vs 553 nodata; LHLYB 19/59). Lesson: geometry is necessary, not sufficient — measure per-station registration /
+site noise vs PGC BEFORE any density-based promise (Puget included). CF timing residual ~1 s at good sites (4a survives).
+
+**DISCOVERY CLOSED (2026-09-20):** pre-registered look (NET-B) + exploratory max-coverage re-runs (NET-M 3 sites/201 d, NET-D) —
+0 hidden families rediscovered in any arm/config; one passing cluster was an adjacency artefact (failed Gates 0-1). Kill test on
+NET-M: seed-and-grow links KEPT families at 14.5x chance (196 edges) template-free → the physics exists; the failure is turning
+linked pairs into a 3-site-unanimous stacked family (percolation at the 1e-4 cut). Northern template-free discovery on permanent
+stations: NOT achieved. Products: lfe_picker/results/P3D_DISCOVERY_RESULTS.md. LHLYB registers ≥ PGC (only such station).
+
+**2026-09-20 P4 (Puget/Olympic) status:** Merlin review (lfe_picker/results/merlin_review_p4_2026-09-20.md) found P3D's "seed-and-grow" was only a pairwise graph with earthquake/burst seeds — the true Bostock construction has never been run. Gate for Puget discovery = P4-0b north kill test (given-seed + template-free arms, kept families, PQ era; markers lfe_picker/results/p4/P4_0B_DONE|FAILED). P4-0 Puget site-noise probe queue (139 stations × 8 days; markers P4_0_DONE|FAILED) running; its proxy must be calibrated on the 14 north stations with measured ρ before the shortlist is used. Puget TEST 2025+ sealed; BUILD 2022–2024; RESERVE 2020–2021.
+**2026-09-20 later:** P4-0a Puget shortlist → STOP under Merlin's pre-registered sub-region rule (6-day clause, both far-bar readings): only 6–10 sites per sub-region both sit ≤45 km of the interface and register tremor; coverage 2–8 % vs 50 % bar. P4-1 download not launched. Pending: P4-0b north kill test (pid 1040534, ~6–9 GPU-h) → then ONE Merlin consult bundling both results + the "cell-restricted attempt" question.
+**2026-09-20 07:20Z P4-0b north kill test DONE (lfe_picker/results/p4/p4_0b/, P4_0B_RESULTS.md pending):** frozen verdict FAIL both arms — given-seed 0/18 kept families assembled (relative clauses vs own truth stack); template-free 1 rediscovered (family 44) vs bar ≥3. Labelled ablation: survival floor 8 or 5 → still 1/18; starved seeds were pure but growth admits non-family hits (purity 1.0→0.36 as hits rise). True hp events: z_med median 2.3, 65 % below Merlin's seed floor 4. Pre-registered consequence: STOP P4-2 (Puget discovery) — now on two independent grounds (P4-0a station set + P4-0b construction). Next: ONE Merlin consult on whether any discovery route remains or the line closes; parked items remain (front estimator v2; far-south seed existence test B045/B935/RVIT/PETY).
+**2026-09-20 08:00Z — DISCOVERY LINE CLOSED (P3D + P4).** Merlin close-out (lfe_picker/results/merlin_review_p4_closeout_2026-09-20.md): STOP over-determined; "purity collapse" mechanism RETRACTED (scoring artefact, see [[scoring-truth-colocated-families]]); template-free seed rule selects LFEs 2–7 % regardless of z; F187→family 44 credited. Standing conclusion: no new families without a pre-existing catalogue; growth from known events/stacks is the only route that worked. Parked/next (user decision): front estimator v2 (de-duplicate co-detected events first) and far-south existence test (Shelly 27 families on B045/B935/RVIT/PETY; ~50–60 GB download needs user OK; Merlin prior ~40 %).
+**2026-09-20 08:15Z corrections filed:** cluster-truth re-score frozen 1/18 (p≥0.2) / 2/18 (any p); A2 ablation 5/18 / 6/18 → ≤6/18 closure criterion met. F1184 Gate 1 FAIL 0/7 withheld sites (not an LFE family). F10 gap-MAD effect real but immaterial (max +5.9 % z); fix before reuse on gappier data. All agents stopped; nothing running.
+**2026-09-20 ~11:00Z — NEW LINE PLANNED: lfe_array_discovery/** (PLAN.md v0 + §10 Merlin amendments; review results/merlin_review_plan_2026-09-20.md). Discover+locate WA families on public temporary arrays (N-Olympic 2010-08 via XG 8 sites + XU 7 + PB 16 first; Puget 2008-05 via CAFE 44 sites + PB 16), then extend on permanents to 2026. Gate: Step 1 north positive control of the autocorrelation engine on lfe_catalog_repair/cache20hz (accept ≥3/10 isolated hidden families). Engine fixes owed first: T=8.0 floor removal, data-driven sites, gap-MAD fix, MIN_SITES 4. Awaiting user go for the download.
+**2026-09-20 15:00Z lfe_array_discovery status:** download queue pid 1080878 (T1–T3 done incl. sealed 2011; T4 2008 running; T7 extension tail overnight). Step 1a north permanent bed: autocorrelation has no single-pair SNR margin at 46–80 km (0/10; true-pair z 2.13 vs null 1.98) → uninformative about engine. Step 1b (2012 + LZB 28 km, pid 1092769) running; Step 1c (2005-09 POLARIS 25–36 km, the true control) authorised and chained after 1b — Fable decisions, Merlin to audit at the Deliverable-A review. Agent D to be resumed once for metadata/site table + Step 0 WA freeze (withheld: B013/B943 + GNW + a 3-C PB borehole; HDW not 3-C pre-2022).
+**2026-09-20 16:30Z:** Step 1a/1b/1c ALL FAIL — even the 2005 POLARIS bed (6 sites ≤36 km, 57k Bostock events in window) gives 0 seed clusters at the FA-rule T=12.5 → pre-registered ENGINE_INADEQUATE. WA discovery queue (x_step5, pid 1122190) parked on results/WA_GO — do not create WA_GO until a repaired engine passes the north. Agent G diagnosing (true-pair recoverability, why T=12.5, hour-flag coverage, window/band ablations); then Merlin audit.
+**2026-09-20 18:00Z Merlin Step-1 audit (lfe_array_discovery/results/merlin_review_step1_2026-09-20.md; PLAN §11):** 1c FAIL = failure of the per-pair SEED rule, not of array discovery or the 20-Hz chain (typical catalogued LFE has S energy only 1.0–1.85× its tremor background → pair cc 0.05–0.2; chain variants identical). Defects found: SHVB 4.76-Hz tone in every sum; quiet hours only clock 0 & 23; no EQ screen; transferred 2012 reference. ONE repair authorised = Step 1c′ pair-seeded growth with oracle ceiling (agent H, markers STEP1CP_DONE|FAILED). Arm B allowed only with LFEDetect `jms` weights (cascadia/cms/jcms/jcs are trained on Bostock stacks) — agent I (ARMB_DONE|FAILED) + WA station-health census/hour-matched quiet set → WA_V2_INPUTS.md. WA_GO only after 1c′ passes with the same hashes + freeze_wa_v2. STOP rules: 1c′ <2/10 clean null → STOP Arm A (north+WA); Arm B(jms) <2/10 → STOP the study. No third repair.
+**2026-09-20 18:10Z:** Arm B(jms) north control FAILED 0/10 (1,042 loosely associated events, 5 clusters ≈ null 3, nothing located). Study rests on Step 1c′ (pid 1165933, STEP1CP_DONE|FAILED, ~6–9 GPU-h); if it fails → study closes per Merlin.
+**2026-09-20 19:30Z Merlin ruling (lfe_array_discovery/results/merlin_ruling_step1cprime_2026-09-20.md; PLAN §12 = FINAL spec):** oracle C_30=0 was Merlin's own mis-specified control — 2004–2005 Bostock export times are whole-second, so align_stack stacks were incoherent; executor's "recall 11–43 %" was self-detection; the 400-event control ran without T_seed. Not STOP. Final chained run (agent J): Step 1 quantisation A/B + corrected 2005 times via 2012 stacks → Step 2 corrected oracle (400 events, ETS-day-only survival, 3 recall denominators) → Step 3 truth-seeded bootstrap test choosing frozen vs staged survival order (scramble twins ≤10 %) → freeze v3 → Step 5 ONE blind run (site-shift ×3) → PASS = WA_GO with v3 per episode (no pooling); FAIL = study closes with Merlin's closing sentence. Study closes ~80 % prior. Arm B closed. Puget 2008 waits for the hour-flag audit (diurnal candidate hours).
+**2026-09-20 20:00Z MANDATE CHANGE (user):** "your code is wrong if you can't reproduce Bostock" — a failed north control = a bug, never a STOP; §12 STOP rules VOID. Reproduce-and-debug on the 2005 POLARIS bed with the 100 kept families as open truth; 30 hidden sealed for one blind check; Merlin only for that final check. Agent K running the stage-by-stage loss trace (ledger lfe_array_discovery/results/REPRO_BOSTOCK.md). Don't relay "not reproducible from the archive" framings again.
+**2026-09-20 21:00Z:** Literal Bostock recipe (6-s, 1–8 Hz, per-component cc sum, 8×MAD, no gates) on the 2005 bed: 35 % of detections are true same-family pairs (top-100 78 %) — the earlier nulls were caused by OUR added clauses (per-station z/site merge/clip/coincidence/quiet-FA T/10-s window). 2005 catalogue times whole-second → recovered sub-second via loud-event stacks. Agent K continuing to grouping → stack → matched filter; ledger lfe_array_discovery/results/REPRO_BOSTOCK.md.
+**2026-09-20 22:00Z:** Reproduction converging — pair stage sees 88/96 kept families; growth control rediscovers 14/19 seeded families at Bostock's bar; full 1,397-group run in progress (K_REPRO2). Key defect class to remember: any 0.5-s (or 1-s) time grid destroys plain stacks at 1–8 Hz (|sinc| zeros) → always realign (Bungum–Husebye) before stacking.
+**2026-09-20 23:30Z: REPRODUCTION ACHIEVED IN SUBSTANCE — 50/96 kept Bostock families rediscovered from autocorrelation seeds alone on the 2005 bed (11 stations); merge step must NOT use waveform similarity for families 0.1–1.6 km apart (resolve duplicates by location). Seed size drives growth (7–10-node seeds 11/12). 15-station + 6×MAD-first-pass + ceiling run in progress (K_REPRO3).**
+**2026-09-20 22:35Z: 58/96 kept Bostock families rediscovered blind on the 2005 bed with 15 stations (literal recipe, no invented gates). Reproduction established.**
+**2026-09-21 01:30Z: BLIND CHECK PASSED — 22/30 sealed Bostock families (6/10 isolated) rediscovered by the literal recipe on the 2005 array bed; kept 58/96. Permanent-station 2012 bed with the same recipe: 3/77 discovered vs 33/77 ceiling (pair purity 1.7× chance vs 11× on arrays) — dense arrays are what make discovery possible; permanent stations suffice for extension from known templates. 'Candidate new families' pending K_REPRO5 re-classification.**
+**2026-09-21 02:30Z NORTH FINAL: hidden 22/30 (ceiling 29/30, 76 %); kept 58/96 (ceiling 89); permanent 2012 bed 3/77 (ceiling 33); 7 conservative candidate new families, 1 spatially distinct (grp 1215, 47.90N −123.66 32 km) — confirmable only by re-fire in 2004-07 POLARIS (downloadable). lfe_array_discovery/results/NORTH_DISCOVERY_SUMMARY.md. WA N-Olympic 2010 run (agent L) in progress.**
+**2026-09-21 07:45Z WA 2010 RESULT: raw screen 50 vs 17 null but 46/50 rail on grid edges; interior 4 vs 3; strict 2 (+1 marginal) vs 0 — grp 1656 (48.04N −123.92 30 km), 1193 (48.16N −123.52 30 km), 1152. Unconfirmed → sealed-2011 re-fire (agent M) with null templates as control. Lesson: always filter grid-edge locations before counting candidates.**
+**2026-09-21 09:15Z WA 2010 CONFIRMATION FAILED: 0/50 confirmed on sealed 2011 (null 0/17); the candidates fire 3× more on non-tremor days → cultural/site repeaters. Lesson: on WA surface arrays the recipe's pair stage is dominated by noise repeaters (4.2× vs 11× tremor/quiet); template-level quiet-day FA + tremor co-timing + interior stable location are mandatory screens and must be applied before counting anything. Last WA bed to try: Puget/S-Olympic 2008 CAFE (44 sites) with 2007-01 as confirmation.**
+**2026-09-21 10:30Z Puget 2008 (CAFE 44 sites + PB): 0 candidates, pair tremor/quiet ratio 0.89; grown templates = noise repeaters (FA 1.53/day quiet vs 1.54 tremor). WA surface arrays are noise-repeater dominated; Bostock's unmodified recipe does not separate LFE pairs there. Levers under test: arrays-as-arrays (2010, agent O), station-quality subset via a noise-repeater census (2008, agent P).**
+**2026-09-21 12:00Z SCREEN VALIDATION: our WA screen kept only 2/58 real Bostock families — the interior-grid, re-stack-stability, 8-km Slab2, shuffled-control and co-timing clauses were unjustified (user was right). Justified tier A: ≥5-station location + |Δz| ≤19 km + ≥3 days + FA ≤0.25/day. Under it WA 2008 has 17 real vs 2 null candidates, WA 2010 127–234 vs 27–59. Confirmation rules being calibrated on the north (agent R) before re-running 2007/2011 re-fires. results/SCREEN_VALIDATION_NORTH.md.**
+**2026-09-21 11:25Z BOOKKEEPING: session ending at weekly limit. READ notes/RESUME_2026-09-21_lfe_array_discovery.md §10 first (running: o_oly2010 pid 1297832; agent R's r_confirm queue may or may not have launched). Do not trust any WA '0 candidates' verdict — they used the unjustified screen; tier A/B/C from SCREEN_VALIDATION_NORTH.md is the standard.**
+
+**2026-09-23 (Opus 5 session) — WASHINGTON IS NOT A NULL RESULT; THE LOCATOR WAS.** (1) Our locator, measured for the first time against Bostock's published coordinates on the 58 reproduced families: 27.6 km median error vs 39.8 km chance, 75 % railing. Rebuilt to 4.0 km (robust L1 + SNR² weights + LOFO station terms + IRLS + soft Slab2 prior + Chestler's station-pair envelope-xcorr differential times); AIC onsets, P picks, S−P and back-projection all measured WORSE. Every WA location column to date is invalid. (2) WA_FINAL_ASSESSMENT.md's "real and null not distinguishable" verdict is wrong — a direction flag printed the best signal backwards. `dedupe_n_partners` AUC 0.758: 280 real Olympic-2010 templates have ≥20 dedupe partners and ZERO null templates do; survives the detection-richness control at matched n_det. (3) Bostock's own published depths sit 9.7 km below this project's Slab2 field — the old |Δz|≤8 km clause was wrong on its face. Next: recompute all WA tables with the 4-km locator, audit every direction flag, redo the Chestler-coordinate comparison. See lfe_array_discovery/PLAN.md §21.
+
+**2026-09-25 PRE-UPDATE HANDOFF — read notes/RESUME_2026-09-21_lfe_array_discovery.md §12 FIRST.** The eight papers were on disk in notes/ the whole time; extraction now in notes/PAPER_METHODS_TABLE.md + notes/CATALOGUE_SUMMARY.md, plan in notes/MARGIN_CATALOG_PLAN_2026-09-24.md. Royer & Bostock LOCATED 122 NW + 54 SW + 47 NVI families (Hyp2000+hypoDD). Washington failed for four of OUR faults: 52 stations vs their 7 named (SQM/GNW/W020/N070 not even downloaded), 6-s/20-sps windows vs their 15-s/40-sps, connected components vs their hierarchical clustering, and their whole second stage (24-h network cross-correlation, 7-10 stations) never run. A zero-fill/no-validity-mask bug in the matched filter produced 12.8 M southern detections vs Shelly's 61 k (fixed in copies: 128,922 -> 21 on the test day); the SAME AUDIT IS OWED ON THE WASHINGTON CHAIN and would invalidate the Olympic 61/69, the 280 dedupe-rich templates and the 2008 zeros if present. Locator rebuilt and validated (4.0 km vs 27.6 km against Bostock's published coordinates). Washington code written but NOT RUN by user instruction: results/AB_ROYER_PLAN.md holds the launch command.

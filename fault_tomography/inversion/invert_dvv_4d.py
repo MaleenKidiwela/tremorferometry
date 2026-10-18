@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """4-D interface delta-beta/beta inversion (v1 raw tensor) — ROUND 2, Merlin-audited fixes applied:
- (1) SIGN: Gc = +K (dvv=integral K dbeta/beta; matches invert_epoch.py), G.npz stores -K -> flip.
+ (1) SIGN — CORRECTED 2026-08-22: the round-1 "flip to +K" was WRONG. The dvv data column is
+     eps = -(dv/v) (stretch_dvv forward-tested) and G.npz stores -K, so eps = G_stored.m holds AS
+     STORED; no flip. m = true dbeta/beta; SITES/idx_data/closure_mean negated at save so every
+     output carries the true velocity-change sign. All results produced before this date (incl. the
+     R6 ETS-composite "sign-correct" call) are sign-inverted in model space.
  (3) BASELINE: per-pair COMMON-WINDOW demean (2019-2024 overlap) so pairs share a reference (no roster-growth
      drift); + a long-record-only index cross-check.
  (4) LAMBDA: oracle on a single representative YEAR (2021) with its true sigma, not the pooled full-record system.
@@ -21,7 +25,9 @@ OUT = os.environ.get("RESDIR", "fault_tomography/inversion/res_catalog"); LAM_RA
 MASK_2SIG = 0.5; BASE_WIN = (2019, 2024); LAMYEAR = 2021
 ERA_SPLIT = os.environ.get("ERA_SPLIT", "0") == "1"   # round-4: instrument-era-split (site x era, per-era demean, straddle drop)
 d = np.load(f"{OUT}/G.npz", allow_pickle=True)
-G = -d["G"].astype(np.float64)                                  # FIX 1: +K convention
+G = d["G"].astype(np.float64)   # NO flip (2026-08-22): data column is eps=-(dv/v) [stretch_dvv forward-
+# tested] and G.npz stores -K (eps = -K.dbeta/beta), so eps = G_stored.m as-is -> m is true dbeta/beta.
+# The old round-1 "FIX 1" flip to +K assumed the data were true dv/v; it made every map/index sign-inverted.
 f = d["captured"].astype(np.float64); clat = d["cell_lat"]; clon = d["cell_lon"]; depth = d["depth_km"]
 cxy = d["cxy"]; cellids = d["cell"]; ptag = d["pair_tag"]; pcell = d["pair_cell"]; psite = d["pair_site"]; Mf = G.shape[1]
 keep = f > 0; Gc = (G*f[:, None])[keep]; ptag, pcell, psite = ptag[keep], pcell[keep], psite[keep]
@@ -176,11 +182,14 @@ for wi, y in enumerate(wins):
     illset = set(pcell[a.row.values]); ill = np.array([cid in illset for cid in cellids])   # row->cell (era-split safe)
     m[~ill] = np.nan; sm[~ill] = np.nan; MODEL[wi] = m; SIGM[wi] = sm
     ut = pd.unique(a.tag.values); sv = r["mfull"][Mf:]              # site terms = near-station field this year
+    # site design columns are +1 against eps=-(dv/v) data -> fitted terms are in eps units; negate so
+    # SITES is stored as TRUE near-station dv/v (same physical sign convention as MODEL = true dbeta/beta)
     for kk, tt in enumerate(ut):
-        if tt in tag2idx: SITES[wi][tag2idx[tt]] = sv[kk]
+        if tt in tag2idx: SITES[wi][tag2idx[tt]] = -sv[kk]
     ab = a[a.pair.isin(based)]                                    # R3-2: index over BASED pairs only (no zero-mean short pairs)
     if len(ab) >= MIN_ROWS and y < 2026:                          # drop 2026: partial-year seasonal-bias (sampling month 3.9 vs 6.5)
-        mb = solve(ab, LAM_F, want_cov=False)["m"]; idx[wi] = np.nanmean(mb[deep]); idx_data[wi] = float(np.mean(Gc[ab.row.values] @ np.nan_to_num(mb)))
+        # Gc.m predicts eps=-(dv/v); negate so idx_data is the data-space index in TRUE dv/v (matches idx sign)
+        mb = solve(ab, LAM_F, want_cov=False)["m"]; idx[wi] = np.nanmean(mb[deep]); idx_data[wi] = -float(np.mean(Gc[ab.row.values] @ np.nan_to_num(mb)))
     al = a[a.pair.isin(longpairs)]
     if len(al) >= MIN_ROWS: idx_long[wi] = np.nanmean(solve(al, LAM_F, want_cov=False)["m"][deep])
 mda_model = float(np.nanmedian([np.nanmedian(2*SIGM[wi][deep]) for wi in range(len(wins)-3, len(wins))]))   # R3-1
@@ -225,7 +234,9 @@ def vr_fault(agg):
     A, ns = build(agg.row.values, agg.tag.values); w = 1/agg.sig.values; St = (A[:, Mf:]*w[:, None])
     ms = np.linalg.lstsq(St, w*agg.dvv.values, rcond=None)[0]; rs = agg.dvv.values - A[:, Mf:]@ms
     rf = agg.dvv.values - A@solve(agg, LAM_F, want_cov=False)["mfull"]; return 1-np.var(rf)/np.var(rs)
-pred = Gc[comp.row.values] @ np.nan_to_num(ets_map); closure_mean = float(np.mean(pred))          # R3-4: bootstrap
+pred = Gc[comp.row.values] @ np.nan_to_num(ets_map); closure_mean = -float(np.mean(pred))         # R3-4: bootstrap
+# (negated: Gc.m predicts eps -> closure_mean is in TRUE dv/v; the historic +0.043% ETS-onset reference
+#  was quoted in the stored eps convention, i.e. -0.043% true dv/v — compare magnitudes only.)
 rngb = np.random.RandomState(1); boot = [float(np.mean(Gc[comp.row.values[rngb.randint(0, len(comp), len(comp))]] @ np.nan_to_num(ets_map))) for _ in range(200)]
 closure_sd = float(np.std(boot))
 VR = float(vr_fault(comp)); vrn = [float(vr_fault(comp.assign(dvv=np.random.RandomState(s).permutation(comp.dvv.values)))) for s in range(10)]  # R3-3
@@ -236,7 +247,7 @@ np.savez_compressed(f"{OUT}/inversion_4d.npz", wins=np.array(wins), MODEL=MODEL,
                     closure_mean=closure_mean, closure_sd=closure_sd, VR=VR, VRnull_m=VRnull_m, VRnull_s=VRnull_s,
                     bound_keys=list(bound.keys()), bound_vals=np.array([bound[k] for k in bound]),
                     SITES=SITES, sta_lat=sta_lat, sta_lon=sta_lon, sta_tags=np.array(sta_tags, dtype=object))
-print(f"\n=== 4-D INVERSION v1 ROUND3 (anomaly rel. {BASE_WIN[0]}-{BASE_WIN[1]}, +K, lam_f={LAM_F:.3f}) ===")
+print(f"\n=== 4-D INVERSION v1 ROUND3 (anomaly rel. {BASE_WIN[0]}-{BASE_WIN[1]}, sign-corrected eps=G.m, lam_f={LAM_F:.3f}) ===")
 print("deep spatial-mean anomaly by year (model% | data% | long-record-only%):")
 for wi, y in enumerate(wins):
     if np.isfinite(idx[wi]): print(f"  {y}: {idx[wi]:+.3f} | {idx_data[wi]:+.4f} | {idx_long[wi]:+.3f}")

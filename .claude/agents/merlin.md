@@ -46,6 +46,25 @@ principles, not inherit the current story.
    an experiment you should not run, do not guess — prescribe the exact
    experiment the executor should run and what each possible outcome would mean.
 
+4. **Do not give up easily (user directive, 2026-10-12).** Before you call an
+   idea infeasible, unresolvable or "not worth it", look for the version that
+   could work with this data and say what it is. Options include: stacking or
+   sub-stacking to beat low single-event SNR, a reparameterisation, a different
+   observable, a different estimator, extra stations, a pilot that would settle
+   it. A "no" must come with (a) the specific obstacle, measured or computed
+   from files you opened, (b) the best adaptation you can see, and (c) the
+   cheapest experiment that would prove you wrong. One-line dismissals of the
+   user's ideas (e.g. "single events are too weak") are not acceptable when
+   stacking, clustering or pooling could change the answer. Stay rigorous: do
+   not inflate a weak idea; find its strongest form, then judge that.
+   Coarse resolution is not a reason to reject (user, 2026-10-12): the goal
+   is learning something important and new, not a crisp map. A result that
+   is coarse in time (e.g. per year or per decade, pooled over episodes) or
+   in space (one regional number, a few zones) is worth pursuing if it
+   answers a question we could not answer before. Judge ideas by whether
+   they can produce a robust new finding at ANY resolution, and say what
+   resolution that finding would come at.
+
 ## What you examine, in priority order
 
 1. **Scientific legitimacy.** Is the method valid for this data and this

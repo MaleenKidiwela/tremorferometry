@@ -16,17 +16,19 @@ sys.path.insert(0, "src")
 from tremorferometry.dvv import stretch_dvv  # noqa: E402
 
 _C = {}
-def _init(t, fs, w1, w2, days, minst, mindays, neps, anchor=False, t_s=1.0, eps_max=0.02):
+def _init(t, fs, w1, w2, days, minst, mindays, neps, anchor=False, t_s=1.0, eps_max=0.02, nosvd=False):
     # anchor=True: stretch about the PINNED DIRECT-S (the matched-filter alignment fixed point),
     # empirically at t_s=+1.0 s (envelope peak; confirmed by dt-vs-lapse). NOT t=0 (= the detection
-    # time, 1 s before the S) and NOT sample 0 (t[0]=-3 s). Anchoring at the S gives dv/v = -eps directly
-    # and makes the 1-3/2-4/3-5 s windows mutually scale-consistent. Anchoring 1 s early (the old t=0
+    # time, 1 s before the S) and NOT sample 0 (t[0]=-3 s). NOTE: the 'dvv' column written by this
+    # script is eps = -(dv/v) -- the negation is NOT applied here. The CSVs are eps by design (kept
+    # bit-identical for provenance); consumers negate once at their own boundary. Anchoring at the S
+    # makes the 1-3/2-4/3-5 s windows mutually scale-consistent. Anchoring 1 s early (the old t=0
     # "origin" anchor) still under-reads window-dependently: (c-0)/(c-1) = 0.50/0.67/0.75x.
     i0 = int(np.searchsorted(t, t_s)) if anchor else 0
     tmin = (w1 - t_s if anchor else w1 - t[0])
     tmax = (w2 - t_s if anchor else w2 - t[0])
     _C.update(t=t, fs=fs, tmin=tmin, tmax=tmax, days=int(days), minst=int(minst),
-              mindays=int(mindays), neps=int(neps), prenoise=(t < -1.0), i0=i0, eps_max=float(eps_max))
+              mindays=int(mindays), neps=int(neps), prenoise=(t < -1.0), i0=i0, eps_max=float(eps_max), nosvd=bool(nosvd))
 
 def _family(arg):
     patch, S, dstr = arg
@@ -45,10 +47,13 @@ def _family(arg):
     R = R[keep]; Dr = dstr[keep]; ck = counts[keep]
     pk = np.max(np.abs(R), axis=1, keepdims=True); pk[pk == 0] = 1.0; Rn = R / pk
     ne, ns = Rn.shape; sig = Rn[:, _C["prenoise"]].std()
-    try:
+    if _C.get("nosvd", False):                          # 2026-09-04: --no-svd option (mechanism test); default unchanged
+        Rf = Rn
+    else:
+      try:
         U, sv, Vt = np.linalg.svd(Rn, full_matrices=False)
         nmf = sig * (np.sqrt(ne) + np.sqrt(ns)); w = sv ** 2 / (sv ** 2 + nmf ** 2); Rf = (U * (sv * w)) @ Vt
-    except np.linalg.LinAlgError:
+      except np.linalg.LinAlgError:
         Rf = Rn
     ref = Rf.mean(0)
     i0 = _C["i0"]
@@ -73,6 +78,7 @@ def main():
                         "is measured independently (own 30-day stacks, own SVD-Wiener, own ref=mean) so restricting "
                         "the set leaves the kept families bit-identical -- it only skips work nothing downstream uses.")
     p.add_argument("--workers", type=int, default=28); p.add_argument("--out", required=True)
+    p.add_argument("--no-svd", action="store_true", help="skip the SVD-Wiener filter (raw rolling stacks vs raw mean reference); mechanism test 2026-09-04")
     p.add_argument("--origin-anchor", action="store_true",
                    help="stretch about the LFE origin (t=0), not sample 0 — true-scale dv/v (~2.3x larger in 2-4 s)")
     args = p.parse_args()
@@ -96,7 +102,7 @@ def main():
     ctx = mp.get_context("spawn"); out = []
     with ProcessPoolExecutor(max_workers=args.workers, mp_context=ctx, initializer=_init,
                              initargs=(t, fs, args.window[0], args.window[1], args.days, args.min_stacks,
-                                       args.mindays, args.n_eps, args.origin_anchor, 1.0, args.eps_max)) as ex:
+                                       args.mindays, args.n_eps, args.origin_anchor, 1.0, args.eps_max, args.no_svd)) as ex:
         futs = [ex.submit(_family, tk) for tk in tasks]
         for f in as_completed(futs):
             out.extend(f.result())

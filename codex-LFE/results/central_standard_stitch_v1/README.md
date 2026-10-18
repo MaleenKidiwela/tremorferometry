@@ -1,0 +1,3 @@
+Library overlap averaging stability diagnostic
+
+The active panel retains 4 of 10 S peaks at score >=0.3 within 0.5 s after a fixed 15 s grid shift. The original central stitching retained 18 of 41. Counts differ because these are different output aggregation methods; these are stability comparisons, not accuracy estimates. Neither method is approved. With library averaging, active three-site associations are 34 versus 25–33 shifted controls, and four-site associations are 7 versus 3–7. Both strict-threshold configurations return zero observed associations. Eight control realizations do not establish a precise false-alarm rate.

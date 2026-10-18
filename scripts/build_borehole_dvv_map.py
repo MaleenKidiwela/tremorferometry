@@ -16,18 +16,46 @@ COORD = {r.sta: (r.lat, r.lon) for _, r in pd.read_csv("data/candidate_stations_
 # broadband/land stations absent from the post-2020 candidate file (permanent networks).
 COORD.update({"PGC": (48.6498, -123.4521), "SHB": (49.5990, -123.8770), "CLRS": (48.8203, -124.1309)})
 CCMIN, MINDAYS = 0.6, 60
+# Station INCLUDE bar for the map = minimum causality-certified families. The fleet gate frozen
+# 2026-07-13 used >=20 (a statistical-power floor); relaxed to 1 on 2026-08-19 -- a certified family
+# is reliable regardless of how many siblings it has, and the map already prints the per-station
+# count so low-N stations are self-labelling. Does NOT change the inversion, which gates on cc>0.7.
+# SIGN CONVENTION (Merlin-audited 2026-08-20). The stored `dvv` column is the STRETCH
+# eps = dt/t, which equals -(dv/v): stretch_dvv solves ref(t)=cur(t*(1+eps)), so a velocity
+# INCREASE (arrivals earlier) returns a NEGATIVE eps. Proven by forward test: a synthetic
+# physical dv/v of +1.00%% comes back as -0.99%%. dvv_roll30cal.py:22 documents 'dv/v = -eps'
+# but never applies it. We negate HERE, at the display boundary, so the 'dv/v (%%)' axis is a
+# true VELOCITY change. Do NOT also negate in stretch_dvv or the CSVs -- a second flip would
+# re-invert it. The CSVs remain eps, bit-identical, for provenance.
+DVV_SIGN = -1.0
+
+MIN_CERT_FAM = 1
+# A day with no stack at ANY family is simply absent from the series, so a line plot joins straight
+# across real outages. Insert one explicit all-null day inside every gap >= GAP_DAYS so Plotly
+# (connectgaps defaults false) breaks the line there.
+GAP_DAYS = 7
 
 
 def famll(pid):
     a = pid.split('__')[0].split('_'); return float(a[0]), float(a[1])
 
 
+def _user_blocklist(s):
+    p = "data/family_user_blocklist.csv"
+    if not os.path.exists(p): return set()
+    b = pd.read_csv(p)
+    return set(b[b.stem == s].fam)
+
+
 def certfams(s):
+    out = None
     if os.path.exists(f"data/{s}_causality_cert.csv"):
-        c = pd.read_csv(f"data/{s}_causality_cert.csv"); return set(c[c.reliable].fam)
-    if os.path.exists(f"data/{s}_fwd_vs_rev_coda.csv"):
-        return set(pd.read_csv(f"data/{s}_fwd_vs_rev_coda.csv").query("ratio>1.5").fam)
-    return None
+        c = pd.read_csv(f"data/{s}_causality_cert.csv"); out = set(c[c.reliable].fam)
+    elif os.path.exists(f"data/{s}_fwd_vs_rev_coda.csv"):
+        out = set(pd.read_csv(f"data/{s}_fwd_vs_rev_coda.csv").query("ratio>1.5").fam)
+    if out is not None:
+        out -= _user_blocklist(s)                  # user-vetoed families (2026-08-31 mechanism)
+    return out
 
 
 def deseason_series(dates, vals):
@@ -56,9 +84,23 @@ def deseason_series(dates, vals):
     return [None if np.isnan(x) else round(float(x), 3) for x in r]
 
 
+def stack_images(tag):
+    """per-family 'correlation function' stack images, precomputed by scripts/build_stack_images.py
+    (they need the 283 GB of daily-stack npz, which this builder never reads). Missing cache -> no panel."""
+    f = f"data/stack_img/{tag}.json.gz"
+    if not os.path.exists(f): return None
+    try:
+        return json.loads(gzip.decompress(open(f, 'rb').read()).decode())
+    except Exception:
+        return None
+
+
 def blocks_for(tag, fams):
-    # dv/v preference: UNIFORM eps_max=0.05 re-run (2026-08-12, certified families only, rail verified cleared)
-    # > the Jul-28 _eps05 pass (inconsistent per-station ranges 0.023-0.049) > the original +/-2% clipped file.
+    # dv/v preference: UNIFORM eps_max=0.05 re-run (2026-08-12, certified families only)
+    # > the Jul-28 _eps05 pass (inconsistent per-station ranges 0.023-0.049) > the original +/-2% file.
+    # CAVEAT: the 0.05 re-run did NOT clear the rail -- NEMA still rails on 8.6% of its cc>0.7 rows,
+    # B035 2.5%, B017 2.4%. A row pinned at 0.05 implies |dv/v|>5%, which is not a credible velocity
+    # change. So this map mixes three search ranges and amplitudes are NOT comparable across stations.
     ucsv = f"data/daily_dvv_{tag}_Z_2to4_unif05.csv"
     ecsv = f"data/daily_dvv_{tag}_Z_2to4_eps05.csv"
     csv = ucsv if os.path.exists(ucsv) else (ecsv if os.path.exists(ecsv) else f"data/daily_dvv_{tag}_Z_2to4.csv")
@@ -66,18 +108,59 @@ def blocks_for(tag, fams):
     d = pd.read_csv(csv)
     if csv in (ucsv, ecsv):   # cc-gate the extended large-stretch TAIL: drop |dv/v|>2% with cc<0.8 (cycle-skip runaways)
         d = d[~((d.dvv.abs() > 0.02) & (d.cc_max < 0.80))].copy()
+    dbp = "data/station_date_blocklist.csv"   # user date-range veto (2026-08-31 mechanism)
+    if os.path.exists(dbp):
+        stem = tag.lower().replace("p90f40", "")
+        for _, br in pd.read_csv(dbp).iterrows():
+            if br.stem == stem:
+                dt = pd.to_datetime(d["date"], errors="coerce")
+                d = d[~((dt >= pd.Timestamp(br.t0)) & (dt <= pd.Timestamp(br.t1)))].copy()
     return _blocks(d, fams, mcsv=f"data/daily_dvv_{tag}_MIRROR_2to4.csv")
+
+
+def blocks35(tag, fams):
+    """3-5 s coda window (2026-09-02 user request): data/daily_dvv_<TAG>_Z_3to5.csv, same estimator + S-anchor as
+    the 2-4 s files, certified families only, eps_max 0.03. Same cc gate / cycle-skip gate / date veto as 2-4 s.
+    Returns (raw, des) or None when the station has no 3-5 s product yet (JS then falls back to 2-4 s)."""
+    csv = f"data/daily_dvv_{tag}_Z_3to5.csv"
+    if not os.path.exists(csv): return None
+    d = pd.read_csv(csv)
+    d = d[~((d.dvv.abs() > 0.02) & (d.cc_max < 0.80))].copy()      # cycle-skip runaways (wide search range)
+    dbp = "data/station_date_blocklist.csv"
+    if os.path.exists(dbp):
+        stem = tag.lower().replace("p90f40", "")
+        for _, br in pd.read_csv(dbp).iterrows():
+            if br.stem == stem:
+                dt = pd.to_datetime(d["date"], errors="coerce")
+                d = d[~((dt >= pd.Timestamp(br.t0)) & (dt <= pd.Timestamp(br.t1)))].copy()
+    r = _blocks(d, fams, mcsv=None)
+    if not r: return None
+    raw, des, _, _ = r; raw.pop('cc', None)
+    return raw, des
+
+
+def _payload(raw, des, img, b35):
+    pl = {'s24': raw, 's24d': des, 'img': img}
+    if b35: pl['s35'], pl['s35d'] = b35
+    return pl
 
 
 def _blocks(d, fams, mcsv=None):
     d = d[(d.cc_max > CCMIN) & (d.patch.isin(fams))].copy()
     if not len(d): return None
     d['ds'] = pd.to_datetime(d['date']).dt.strftime('%Y-%m-%d')
-    piv = d.pivot_table(index='ds', columns='patch', values='dvv', aggfunc='first') * 100.0
+    piv = d.pivot_table(index='ds', columns='patch', values='dvv', aggfunc='first') * 100.0 * DVV_SIGN
+    npiv = (d.pivot_table(index='ds', columns='patch', values='n_stack', aggfunc='max')
+            if 'n_stack' in d.columns else None)
     days = sorted(piv.index); piv = piv.reindex(days)
     keep = [fid for fid in piv.columns if piv[fid].notna().sum() >= MINDAYS]
     if not keep: return None
-    piv = piv[keep]
+    dd = pd.to_datetime(days)                                   # explicit null day inside every real gap
+    marks = [(a + (b - a) / 2).strftime('%Y-%m-%d') for a, b in zip(dd[:-1], dd[1:])
+             if (b - a).days >= GAP_DAYS]
+    if marks: days = sorted(set(days) | set(marks))
+    piv = piv.reindex(days)[keep]
+    if npiv is not None: npiv = npiv.reindex(index=days, columns=keep)
 
     def blk(P):
         byfam = {fid: [None if pd.isna(v) else round(float(v), 3) for v in P[fid].values] for fid in P.columns}
@@ -90,12 +173,15 @@ def _blocks(d, fams, mcsv=None):
         return blk(Pd)
 
     raw = blk(piv); raw['cc'] = round(float(d.cc_max.mean()), 2)
+    if npiv is not None:   # n_stack = daily stacks inside that day's trailing 30-day window
+        raw['nst'] = {fid: [None if pd.isna(v) else int(v) for v in npiv[fid].values] for fid in keep}
+        raw['ncov'] = [int(v) for v in piv.notna().sum(axis=1).values]   # families reporting per day
     des = deseason_blk(piv)
     # mirror-cleaned: coda - beta*mirror  (beta from the station's deseasoned common-mode regression)
     if mcsv and os.path.exists(mcsv):
         m = pd.read_csv(mcsv); m = m[(m.cc_max > CCMIN) & (m.patch.isin(keep))]
         m['ds'] = pd.to_datetime(m['date']).dt.strftime('%Y-%m-%d')
-        mpiv = m.pivot_table(index='ds', columns='patch', values='dvv', aggfunc='first') * 100.0
+        mpiv = m.pivot_table(index='ds', columns='patch', values='dvv', aggfunc='first') * 100.0 * DVV_SIGN
         mpiv = mpiv.reindex(index=days, columns=keep)
         cc_c = pd.Series(deseason_series(days, list(piv.median(axis=1).values)), index=days)
         cc_m = pd.Series(deseason_series(days, list(mpiv.median(axis=1).values)), index=days)
@@ -136,6 +222,7 @@ for s in _stations:
     fams = certfams(s.lower())
     if not fams: continue
     bl = blocks_for(f"{s}p90f40", fams)   # dv/v CSVs are named with UPPERCASE station tag (B001p90f40)
+    _img = stack_images(f"{s}p90f40")
     if not bl: continue
     raw, des, clean, cleand = bl
     la, lo = COORD[s]
@@ -143,15 +230,34 @@ for s in _stations:
     fam = [{'id': fid, 'lat': round(famll(fid)[0], 3), 'lon': round(famll(fid)[1], 3)} for fid in fam_ids]
     cc = raw.pop('cc')
     DATA[s] = {'lat': la, 'lon': lo, 'fam': fam, 'cc': cc, 'nfam': len(fam), 'tremor': tremor_for(fam)}
-    payload = json.dumps({'s24': raw, 's24d': des},
-                         separators=(',', ':')).encode()
+    b35 = blocks35(f"{s}p90f40", fams)
+    payload = json.dumps(_payload(raw, des, _img, b35), separators=(',', ':')).encode()
     DAILY[s] = base64.b64encode(gzip.compress(payload, 6)).decode()
-    print(f"  {s}: {len(fam)} certified fam -> {len(DAILY[s])/1e6:.2f} MB gz")
+    print(f"  {s}: {len(fam)} certified fam{' +3-5s' if b35 else ''} -> {len(DAILY[s])/1e6:.2f} MB gz")
 
 # --- broadband/land entries (borehole loop above discovers p90f40 products only). PGC = ONE marker, both
 #     instrument eras (BHZ 2010-2017 + HHZ 2018-2026) in ONE figure. Each era keeps its OWN per-era reference
 #     (unjoined: never averaged across the Aug-2017 sensor swap); a synthetic all-NaN day at the swap breaks
 #     the line so the two segments read as two instruments, not one continuous series. Fleet broadbands add here.
+def bb_entry35(parts, brk):
+    """3-5 s counterpart of bb_entry (same seams / cohorts)."""
+    dfs, allf = [], set()
+    for i, (tag, stem) in enumerate(parts):
+        f = certfams(stem); csv = f"data/daily_dvv_{tag}_Z_3to5.csv"
+        if not f or not os.path.exists(csv): continue
+        d = pd.read_csv(csv); d = d[d.patch.isin(f)]
+        d = d[~((d.dvv.abs() > 0.02) & (d.cc_max < 0.80))]
+        allf |= f; dfs.append(d)
+        if brk and i < len(parts) - 1 and len(d):
+            seam = (pd.to_datetime(d.date).max() + pd.Timedelta(days=30)).strftime('%Y-%m-%d')
+            dfs.append(pd.DataFrame({'patch': [sorted(f)[0]], 'date': [seam], 'dvv': [np.nan], 'cc_max': [1.0], 'n_stack': [1]}))
+    if not dfs: return None
+    r = _blocks(pd.concat(dfs, ignore_index=True), allf, mcsv=None)
+    if not r: return None
+    raw, des, _, _ = r; raw.pop('cc', None)
+    return raw, des
+
+
 def bb_entry(parts, brk):
     """parts=[(dvv_tag, cert_stem), ...] concatenated into ONE figure. brk=True inserts a synthetic all-NaN seam
     between different-INSTRUMENT eras (PGC/SHB: per-era refs, unjoined); False merges same-instrument cohorts
@@ -177,18 +283,23 @@ for key, (parts, brk) in BB.items():
     if key not in COORD: continue
     res, _ = bb_entry(parts, brk)
     if not res: continue
+    _img = {}
+    for _t, _ in parts:
+        _m = stack_images(_t)
+        if _m: _img.update(_m)
+    _img = _img or None
     raw, des, clean, cleand = res
     la, lo = COORD[key]
     fam_ids = sorted(raw['byfam'])
     fam = [{'id': fid, 'lat': round(famll(fid)[0], 3), 'lon': round(famll(fid)[1], 3)} for fid in fam_ids]
     cc = raw.pop('cc')
     DATA[key] = {'lat': la, 'lon': lo, 'fam': fam, 'cc': cc, 'nfam': len(fam), 'tremor': tremor_for(fam)}
-    payload = json.dumps({'s24': raw, 's24d': des},
-                         separators=(',', ':')).encode()
+    b35 = bb_entry35(parts, brk)
+    payload = json.dumps(_payload(raw, des, _img, b35), separators=(',', ':')).encode()
     DAILY[key] = base64.b64encode(gzip.compress(payload, 6)).decode()
-    print(f"  {key}: {len(fam)} certified fam -> {len(DAILY[key])/1e6:.2f} MB gz")
+    print(f"  {key}: {len(fam)} certified fam{' +3-5s' if b35 else ''} -> {len(DAILY[key])/1e6:.2f} MB gz")
 
-# --- fleet broadband stations (single-band, auto-discovered from their dv/v products). INCLUDE bar: >=20
+# --- fleet broadband stations (single-band, auto-discovered from their dv/v products). INCLUDE bar: MIN_CERT_FAM
 #     certified reliable families. Coords from the fleet order. Picks up every completed fleet station.
 _fleet_coord = {r.sta: (r.lat, r.lon) for _, r in pd.read_csv("data/broadband_fleet_order.csv").iterrows()}
 _anchor_tags = {"PGCbhz", "PGChhz", "SHB", "SHBhhz", "CLRS", "CLRSnew"}
@@ -197,9 +308,10 @@ for csv in sorted(glob.glob("data/daily_dvv_*_Z_2to4.csv")):
     if "p90f40" in tag or "MIRROR" in tag or tag in _anchor_tags or tag in DATA or tag not in _fleet_coord:
         continue
     fams = certfams(tag.lower())
-    if not fams or len(fams) < 20:          # INCLUDE bar
+    if not fams or len(fams) < MIN_CERT_FAM:   # INCLUDE bar (see MIN_CERT_FAM)
         continue
     bl = blocks_for(tag, fams)
+    _img = stack_images(tag)
     if not bl:
         continue
     raw, des, clean, cleand = bl
@@ -208,10 +320,10 @@ for csv in sorted(glob.glob("data/daily_dvv_*_Z_2to4.csv")):
     fam = [{'id': fid, 'lat': round(famll(fid)[0], 3), 'lon': round(famll(fid)[1], 3)} for fid in fam_ids]
     cc = raw.pop('cc')
     DATA[tag] = {'lat': la, 'lon': lo, 'fam': fam, 'cc': cc, 'nfam': len(fam), 'tremor': tremor_for(fam)}
-    payload = json.dumps({'s24': raw, 's24d': des},
-                         separators=(',', ':')).encode()
+    b35 = blocks35(tag, fams)
+    payload = json.dumps(_payload(raw, des, _img, b35), separators=(',', ':')).encode()
     DAILY[tag] = base64.b64encode(gzip.compress(payload, 6)).decode()
-    print(f"  {tag}: {len(fam)} certified fam (fleet broadband) -> {len(DAILY[tag])/1e6:.2f} MB gz")
+    print(f"  {tag}: {len(fam)} certified fam (fleet broadband){' +3-5s' if b35 else ''} -> {len(DAILY[tag])/1e6:.2f} MB gz")
 
 djs = json.dumps(DATA, separators=(',', ':')); djson = json.dumps(DAILY, separators=(',', ':'))
 print(f"{len(DATA)} stations | DATA {len(djs)/1e6:.2f} MB | DAILY {len(djson)/1e6:.2f} MB")
@@ -234,7 +346,10 @@ HTML = r'''<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cascadia bore
 .dswrap input{display:none}.switch{width:34px;height:19px;border-radius:999px;background:#cbd5e1;position:relative;transition:.15s;flex:none}
 .switch::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:.15s}
 .dswrap input:checked+.switch{background:var(--accent)}.dswrap input:checked+.switch::after{transform:translateX(15px)}
-#plot{height:44vh;min-height:300px;padding:8px}#info{font-size:12.5px;color:var(--muted);line-height:1.55;padding:10px 16px}
+#plot{height:64vh;min-height:460px;padding:8px}
+#stackwrap{padding:2px 16px 10px 16px;display:none}
+#stackwrap .cap{font-size:11px;color:var(--muted);margin:2px 0 4px 0}
+#info{font-size:12.5px;color:var(--muted);line-height:1.55;padding:10px 16px}
 #stawrap{flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 14px}
 .chip{display:inline-block;padding:4px 10px;margin:3px;font-size:12px;font-weight:600;border:1px solid var(--line);border-radius:999px;cursor:pointer;background:var(--card);color:#cbd5e1}
 .chip:hover,.chip.active{border-color:var(--accent);color:var(--accent)}.chip.active{background:var(--soft)}
@@ -242,10 +357,11 @@ HTML = r'''<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cascadia bore
 .chip{box-shadow:var(--shadow)}
 </style></head><body><div id="wrap"><div id="map"></div><div id="drag" title="drag to widen the panel"></div>
 <aside id="side"><div id="hdr"><div class="title">Cascadia LFE-coda dv/v (boreholes + broadband)</div>
-<div class="sub">causality-certified families &middot; daily 30-day trailing stack, 2&ndash;4 s coda &middot; click a <b>station</b> or a <b>family</b></div></div>
-<div id="ctrl" class="panel"><label class="dswrap"><input type="checkbox" id="deseason"><span class="switch"></span><span>deseason &mdash; remove annual + semiannual cycle</span></label></div>
+<div class="sub">causality-certified families &middot; daily 30-day trailing stack, 2&ndash;4 s or 3&ndash;5 s coda &middot; click a <b>station</b> or a <b>family</b></div></div>
+<div id="ctrl" class="panel"><label class="dswrap"><input type="checkbox" id="deseason"><span class="switch"></span><span>deseason &mdash; remove annual + semiannual cycle</span></label>
+<label class="dswrap" style="margin-top:8px"><input type="checkbox" id="win35"><span class="switch"></span><span>coda window: <b id="winlbl">2&ndash;4 s</b> &rarr; toggle for 3&ndash;5 s (same S-anchored estimator; stations without a 3&ndash;5 s product fall back to 2&ndash;4 s)</span></label></div>
 <div id="sliderwrap" class="panel" style="display:none;padding:11px 14px"><div style="display:flex;align-items:center;gap:12px"><span class="lbl">family</span><input type="range" id="famslider" min="0" max="0" value="0" step="1" style="flex:1;accent-color:var(--accent)"><span id="slabel" class="lbl" style="min-width:132px;text-align:right;color:var(--ink)"></span></div></div>
-<div id="plot" class="panel"></div><div id="info">Click a station marker.</div>
+<div id="plot" class="panel"></div><div id="stackwrap"><div class="cap" id="stackcap"></div></div><div id="info">Click a station marker.</div>
 <div id="stawrap"><div class="lbl">stations (certified family count)</div><div id="stalist"></div></div></aside></div><script>
 const DATA=__DATA__,DAILY=__DAILY__,_dc={};
 function dailyOf(s){if(!(s in _dc)){try{const b=atob(DAILY[s]);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);_dc[s]=JSON.parse(pako.inflate(u,{to:'string'}));}catch(e){_dc[s]=null;}}return _dc[s];}
@@ -253,37 +369,74 @@ const names=Object.keys(DATA).sort((a,b)=>DATA[b].lat-DATA[a].lat);
 const PAL=['#2563eb','#dc2626','#059669','#d97706','#7c3aed','#0891b2','#db2777','#65a30d','#9333ea','#c2410c'];
 const col={};names.forEach((s,i)=>col[s]=PAL[i%PAL.length]);
 const map=L.map('map').setView([48.4,-124.2],7);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OSM, &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+__BASEMAP__
 let cur={s:null,fi:0,yr:[-0.7,0.7]};   // fi: 0=all-families overview, 1..nfam=that family; yr locked at station-select
 function dson(){return document.getElementById('deseason').checked;}
-function wkey(){return 's24'+(dson()?'d':'');}
-function tagTxt(){return dson()?' (deseasoned)':'';}
-function blk(s){const DD=dailyOf(s);return DD?DD[wkey()]:null;}
-function rawblk(s){const DD=dailyOf(s);return DD?DD['s24']:null;}
+function w35(){return document.getElementById('win35').checked;}
+function has35(s){const DD=dailyOf(s);return !!(DD&&DD['s35']);}
+function wbase(s){return (w35()&&has35(s))?'s35':'s24';}
+function wkey(s){return wbase(s)+(dson()?'d':'');}
+function tagTxt(s){return (w35()?(has35(s)?' [3-5 s]':' [3-5 s n/a -> 2-4 s]'):' [2-4 s]')+(dson()?' (deseasoned)':'');}
+function blk(s){const DD=dailyOf(s);return DD?DD[wkey(s)]:null;}
+function rawblk(s){const DD=dailyOf(s);return DD?DD[wbase(s)]:null;}
 const Y2={title:'tremor/mo',overlaying:'y',side:'right',showgrid:false,rangemode:'tozero',titlefont:{color:'#f59e0b',size:10},tickfont:{color:'#f59e0b',size:9}};
+// two stacked panels sharing one x-axis: dv/v above, daily-stack availability below. Days with no
+// stack are absent/null in the series, so both panels go blank there -- gaps are visible, not bridged.
+// family view has 3 panels (dv/v | stacks | stack image); station view has only the first two,
+// so it uses the taller 2-panel domains.
+const DOM_TOP=[0.56,1.0], DOM_BOT=[0.38,0.52], DOM_IMG=[0.0,0.32];
+const DOM_TOP2=[0.30,1.0], DOM_BOT2=[0.0,0.20];
+function yaxDvv(yr,dom){return {title:'dv/v (%)',zeroline:true,zerolinecolor:'#e33',range:yr,domain:dom||DOM_TOP};}
+function Y3f(dom){return {title:{text:'stacks',font:{size:9}},domain:dom||DOM_BOT,anchor:'x',rangemode:'tozero',showgrid:false,tickfont:{size:8},zeroline:false};}
+const Y3=Y3f();
+// the 30-day rolling-stack image, drawn as a real Plotly panel so it gets ticks/labels and shares
+// the DATE axis with the dv/v curve above (image is stored transposed: x=date, y=lapse).
+function Y4(M){return {title:{text:'lapse (s)',font:{size:9}},domain:DOM_IMG,anchor:'x',
+  range:[M?M.lo:1,M?M.hi:5],tickfont:{size:8},showgrid:false,zeroline:false};}
+function imgLayer(M){if(!M)return[];const t0=new Date(M.t0+'T00:00:00Z').getTime(),
+  t1=new Date(M.t1+'T00:00:00Z').getTime();
+  return [{source:'data:image/webp;base64,'+M.img,xref:'x',yref:'y4',x:M.t0,y:M.hi,
+    sizex:(t1-t0),sizey:(M.hi-M.lo),xanchor:'left',yanchor:'top',sizing:'stretch',layer:'below'}];}
+function stackTrace(x,y,name){return {x:x,y:y,type:'scattergl',mode:'lines',yaxis:'y3',fill:'tozeroy',
+  line:{color:'rgba(100,116,139,0.85)',width:0.6},fillcolor:'rgba(100,116,139,0.30)',name:name,hovertemplate:'%{x}<br>'+name+': %{y}<extra></extra>'};}
 const LAY={paper_bgcolor:'#fff',plot_bgcolor:'#fff',font:{color:'#334155'}};
+const ERAS={"KHBB":["2022-08-09"],"LCCR":["2020-08-23"],"PETY":["2022-08-30","2025-07-23"],"SCOT":["2022-10-27"],"TRIN":["2022-10-26"],"WISH":["2011-06-14"],"YACT":["2020-10-17"]};function eraShapes(s){const b=ERAS[s]||[];return b.map(d=>({type:'line',xref:'x',x0:d,x1:d,yref:'paper',y0:0,y1:1,line:{color:'#dc2626',width:1.2,dash:'dot'}}));}
+
 // symmetric robust y-range from the RAW family cloud + median; locked at station-select so deseason & the
 // family slider never rescale (compare like-for-like). 1/99 pct trims wild single-family excursions.
 function computeYR(D){const v=[];for(const id in D.byfam){const a=D.byfam[id];for(let i=0;i<a.length;i++)if(a[i]!=null)v.push(a[i]);}for(let i=0;i<D.med.length;i++)if(D.med[i]!=null)v.push(D.med[i]);if(!v.length)return[-0.7,0.7];v.sort((a,b)=>a-b);const q=p=>v[Math.min(v.length-1,Math.max(0,Math.round(p*(v.length-1))))];let m=Math.max(Math.abs(q(0.01)),Math.abs(q(0.99)));m=Math.max(m*1.1,0.05);return[-m,m];}
 // x-range = the actual span where the shown series exists (0.5% stray-trim). No empty 2010-2026 padding.
 function xrFromVals(dates,vals){const idx=[];for(let i=0;i<vals.length;i++)if(vals[i]!=null)idx.push(i);if(!idx.length)return[dates[0],dates[dates.length-1]];const lo=idx[Math.floor(0.005*(idx.length-1))],hi=idx[Math.ceil(0.995*(idx.length-1))];return[dates[lo],dates[hi]];}
 function selectStation(s){const R=rawblk(s);cur={s:s,fi:0,yr:R?computeYR(R):[-0.7,0.7]};const sl2=document.getElementById('famslider');document.getElementById('sliderwrap').style.display='';sl2.max=DATA[s].nfam;sl2.value=0;render();}
+function stackCap(M){const w=document.getElementById('stackwrap'),cp=document.getElementById('stackcap');
+  if(!M){w.style.display='none';return;}
+  cp.innerHTML='<b>bottom panel</b> = the 30-day rolling stacks the dv/v is measured on (lapse '+M.lo+'&ndash;'+M.hi+' s). '
+    +M.n+' stacks, '+M.ngap+' empty rows, mean coverage '+M.cov+'. '
+    +'<span style="background:#f2f2f2;border:1px solid #cbd5e1">&nbsp;grey&nbsp;</span> = no stack; rows fade toward grey as days go missing. '
+    +'Colour is scaled to the 2&ndash;4 s coda (the direct S is ~16&times; larger and would saturate it).';
+  w.style.display='block';}
 function render(){const s=cur.s;if(!s)return;setChip(s);const D=blk(s);const slab=document.getElementById('slabel');if(!D){Plotly.purge('plot');return;}
  if(cur.fi===0){hiStation(s);
   const tr=[];const T=DATA[s].tremor;if(T)tr.push({x:T.dates,y:T.total,type:'bar',yaxis:'y2',marker:{color:'rgba(245,158,11,0.4)'},hoverinfo:'x+y',name:'tremor'});
   let X=[],Y=[];for(const id in D.byfam){const a=D.byfam[id];for(let i=0;i<a.length;i++){X.push(D.dates[i]);Y.push(a[i]);}X.push(null);Y.push(null);}
   tr.push({x:X,y:Y,type:'scattergl',mode:'lines',line:{color:'rgba(148,163,184,0.28)',width:0.6},hoverinfo:'skip'});
   tr.push({x:D.dates,y:D.med,type:'scattergl',mode:'lines',line:{color:col[s],width:2.4},name:'median'});
-  Plotly.react('plot',tr,Object.assign({margin:{l:52,r:46,t:34,b:34},showlegend:false,title:{text:s+' &mdash; '+DATA[s].nfam+' certified families + median'+tagTxt(),font:{size:13}},yaxis:{title:'dv/v (%)',zeroline:true,zerolinecolor:'#e33',range:cur.yr.slice()},yaxis2:Y2,xaxis:{title:'date',range:xrFromVals(D.dates,D.med)}},LAY),{responsive:true});
+  const RB=rawblk(s); if(RB&&RB.ncov)tr.push(stackTrace(RB.dates,RB.ncov,'families reporting'));
+  Plotly.react('plot',tr,Object.assign({shapes:eraShapes(cur.s),margin:{l:52,r:46,t:34,b:34},showlegend:false,title:{text:s+' \u2014 '+DATA[s].nfam+' certified families + median'+tagTxt(s),font:{size:13}},yaxis:yaxDvv(cur.yr.slice(),DOM_TOP2),yaxis2:Y2,yaxis3:Y3f(DOM_BOT2),xaxis:{title:'date',anchor:'y3',range:xrFromVals(D.dates,D.med)}},LAY),{responsive:true});
   if(slab)slab.textContent='all families ('+DATA[s].nfam+')';
+  document.getElementById('stackwrap').style.display='none';
   document.getElementById('info').innerHTML='<b>'+s+'</b> '+DATA[s].lat.toFixed(2)+'&deg;N &mdash; '+DATA[s].nfam+' certified families (thin) + per-day cross-family median (bold). Orange = tremor/mo within 20 km. Slide above to step through families.';
  }else{const f=DATA[s].fam[cur.fi-1];if(!f)return;const id=f.id,yv=D.byfam[id]||[];hiPatch(s,id);
   const ft=[];
   ft.push({x:D.dates,y:D.med,type:'scattergl',mode:'lines',line:{color:'#000',width:1.3,dash:'dot'},name:'median'});
   ft.push({x:D.dates,y:yv,type:'scattergl',mode:'lines',line:{color:col[s],width:2},name:'family'});
-  Plotly.react('plot',ft,Object.assign({margin:{l:52,r:46,t:34,b:34},showlegend:false,title:{text:s+' &mdash; family '+cur.fi+'/'+DATA[s].nfam+tagTxt(),font:{size:12}},yaxis:{title:'dv/v (%)',zeroline:true,zerolinecolor:'#e33',range:cur.yr.slice()},xaxis:{title:'date',range:xrFromVals(D.dates,yv)}},LAY),{responsive:true});
-  if(slab)slab.textContent='family '+cur.fi+' / '+DATA[s].nfam;
-  document.getElementById('info').innerHTML='<b>'+s+'</b> &mdash; family '+cur.fi+'/'+DATA[s].nfam+' @ '+f.lat+'&deg;N '+f.lon+'&deg; (bold, station color) vs station median (black dotted).';}}
+  const RB2=rawblk(s); if(RB2&&RB2.nst&&RB2.nst[id])ft.push(stackTrace(RB2.dates,RB2.nst[id],'daily stacks in 30-d window'));
+  const DDi=dailyOf(s); const MI=DDi&&DDi.img?DDi.img[id]:null;
+  ft.push({x:[null],y:[null],type:'scattergl',mode:'markers',yaxis:'y4',hoverinfo:'skip',showlegend:false});
+  Plotly.react('plot',ft,Object.assign({shapes:eraShapes(cur.s),margin:{l:52,r:46,t:34,b:34},showlegend:false,title:{text:s+' \u2014 family '+cur.fi+'/'+DATA[s].nfam+' \u00b7 '+id+tagTxt(s),font:{size:12}},yaxis:yaxDvv(cur.yr.slice()),yaxis3:Y3,yaxis4:Y4(MI),images:imgLayer(MI),xaxis:{title:'date',anchor:'y4',range:xrFromVals(D.dates,yv)}},LAY),{responsive:true});
+  stackCap(MI);
+  if(slab)slab.textContent='family '+cur.fi+' / '+DATA[s].nfam+' \u00b7 '+id.split('__')[1];
+  document.getElementById('info').innerHTML='<b>'+s+'</b> &mdash; family '+cur.fi+'/'+DATA[s].nfam+' <span style="font-family:monospace">['+id+']</span> @ '+f.lat+'&deg;N '+f.lon+'&deg; (bold, station color) vs station median (black dotted).';}}
 function showStation(s){selectStation(s);}
 function showFam(s,id){if(cur.s!==s)selectStation(s);const i=DATA[s].fam.findIndex(x=>x.id===id);if(i<0)return;cur.fi=i+1;document.getElementById('famslider').value=cur.fi;render();}
 const layers={},chips={};
@@ -300,6 +453,7 @@ const sl=document.getElementById('stalist');
 names.forEach(s=>{const b=document.createElement('span');b.textContent=s+' ('+DATA[s].nfam+')';b.className='chip';b.onclick=()=>showStation(s);sl.appendChild(b);chips[s]=b;});
 function setChip(s){for(const k in chips)chips[k].classList.toggle('active',k===s);}
 document.getElementById('deseason').addEventListener('change',render);
+document.getElementById('win35').addEventListener('change',function(){document.getElementById('winlbl').innerHTML=this.checked?'3&ndash;5 s':'2&ndash;4 s';if(cur.s){const R=rawblk(cur.s);cur.yr=R?computeYR(R):[-0.7,0.7];render();}});
 document.getElementById('famslider').addEventListener('input',function(){cur.fi=+this.value;render();});
 (function(){const dr=document.getElementById('drag'),sd=document.getElementById('side');let on=false;
  dr.addEventListener('mousedown',e=>{on=true;dr.classList.add('on');document.body.style.cursor='col-resize';e.preventDefault();});
@@ -308,7 +462,12 @@ document.getElementById('famslider').addEventListener('input',function(){cur.fi=
 window.addEventListener('resize',()=>{map.invalidateSize();Plotly.Plots.resize('plot');});
 if(names.length)showStation(names[0]);
 </script></body></html>'''
-out = HTML.replace('__DATA__', djs).replace('__DAILY__', djson)
+# 2026-10-16: OSM and CARTO tiles refuse file:// pages ('Access blocked' / 'API key required'). Esri tiles need no
+# key; an embedded Natural Earth coastline (data/basemap_cascadia_ne10m.json) shows even when tiles are blocked.
+_BASEMAP = ("L.geoJSON(" + open('data/basemap_cascadia_ne10m.json').read() + ".coast,{style:{color:'#475569',weight:1.1,fill:false},interactive:false}).addTo(map);"
+            "L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',"
+            "{attribution:'Tiles &copy; Esri &middot; Coastline: Natural Earth',maxZoom:18}).addTo(map);")
+out = HTML.replace('__BASEMAP__', _BASEMAP).replace('__DATA__', djs).replace('__DAILY__', djson)
 os.makedirs('figures', exist_ok=True)
 with open('figures/borehole_dvv_map.html', 'w') as f:
     f.write(out)
